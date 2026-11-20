@@ -23,7 +23,7 @@ A modern, standalone Python library and unified Command Line Interface (CLI) for
 Clone the repository and install the package in editable mode:
 
 ```bash
-git clone https://github.com/Dafodilrat/baxter-py.git
+git clone https://github.com/RoboX2020/baxter-py.git
 cd baxter-py
 pip install -e .
 ```
