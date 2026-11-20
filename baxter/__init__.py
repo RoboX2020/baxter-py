@@ -12,8 +12,9 @@ from .camera import Camera
 from .choreography import SymphonyChoreography, DanceParty
 from .vision import BoxerSparring
 from .arena import InteractiveArena
+from .sim import broadcast_sim_command, launch_sim_twin
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "Baxter",
     "Limb",
@@ -24,6 +25,8 @@ __all__ = [
     "InteractiveArena",
     "SymphonyChoreography",
     "DanceParty",
+    "broadcast_sim_command",
+    "launch_sim_twin",
     "POSES",
     "JOINTS",
     "LIMITS",

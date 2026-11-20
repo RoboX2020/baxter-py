@@ -238,6 +238,18 @@ async def cmd_play(args):
         await arena.run(duration_sec=args.duration)
 
 
+def cmd_sim(args):
+    from .sim import launch_sim_twin
+    ip = resolve_baxter_ip(args.host)
+    launch_sim_twin(
+        host=ip,
+        port=args.port,
+        udp_port=args.udp_port,
+        headless=args.headless,
+        sim_to_real=args.sim_to_real
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="baxter",
@@ -324,6 +336,12 @@ def main():
     p_arena.add_argument("--no-mirror", action="store_true", help="Disable selfie mirror reflection mode")
     p_arena.add_argument("--no-gui", action="store_true", help="Run in headless mode without desktop OpenCV window")
 
+    # sim
+    p_sim = subparsers.add_parser("sim", help="Launch NVIDIA Isaac Sim Baxter 3D Digital Twin with real-to-sim / sim-to-real bridge")
+    p_sim.add_argument("--headless", action="store_true", help="Run in headless mode without opening GUI window")
+    p_sim.add_argument("--udp-port", type=int, default=19888, help="Local UDP parallel command port (default: 19888)")
+    p_sim.add_argument("--sim-to-real", action="store_true", help="Enable commanding physical robot from simulation")
+
     args = parser.parse_args()
 
     dispatch = {
@@ -343,11 +361,16 @@ def main():
         "box": cmd_box,
         "play": cmd_play,
         "arena": cmd_play,
+        "sim": cmd_sim,
     }
 
     fn = dispatch.get(args.command)
     if fn:
-        run_async(fn(args))
+        import inspect
+        if inspect.iscoroutinefunction(fn):
+            run_async(fn(args))
+        else:
+            fn(args)
     else:
         parser.print_help()
 

@@ -128,10 +128,28 @@ baxter symphony
 #### Arena Hotkeys:
 * `[1]`: Arcade Reflex Boxer 2.0
 * `[2]`: Rock-Paper-Scissors Showdown (press `SPACE` to count down & throw!)
-* `[3]`: Jedi Shadow Teleoperation (moves arms live with your hands)
+* `[3]`: Jedi Shadow Teleoperation (intuitive 1:1 dual-arm mirroring with force push recoil)
 * `[4]`: High-Five & Fist-Bump Partner
 * `[m]`: Toggle Selfie Mirror Reflection mode (ON / OFF)
 * `[q]` or `ESC`: Exit and return arms to neutral pose
+
+### 7. NVIDIA Isaac Sim 3D Digital Twin & Bidirectional Sync
+Launch an NVIDIA Isaac Sim 3D digital twin of Baxter running in parallel with the physical robot:
+
+```bash
+# Launch interactive 3D digital twin in Isaac Sim
+baxter sim
+
+# Launch in headless mode (background physics & telemetry)
+baxter sim --headless
+
+# Enable bidirectional sim-to-real commanding
+baxter sim --sim-to-real
+```
+
+#### Parallel Execution:
+* **Real-to-Sim**: Physical Baxter encoder states (`/robot/joint_states`) continuously stream into Isaac Sim at 60+ FPS, faithfully mirroring physical motion, external forces, and human teleoperation.
+* **Sim-to-Real & Parallel Commands**: All motion commands (`baxter move wave`, `baxter play`, `baxter dance`, etc.) automatically broadcast via low-latency UDP (`127.0.0.1:19888`) so both the real robot and Isaac Sim execute in lockstep synchronization.
 
 ---
 
@@ -192,14 +210,16 @@ asyncio.run(stream_and_detect())
 baxter-py/
 ├── baxter/
 │   ├── __init__.py      # Package export and version info
-│   ├── client.py        # Core Baxter connection and coordinated control
+│   ├── client.py        # Core Baxter connection, WebSocket & parallel UDP broadcast
 │   ├── limb.py          # Arm control, trajectory interpolation, and jogging
 │   ├── head.py          # Head pan, nod, and gaze tracking
 │   ├── display.py       # 1024x600 LCD renderer and vector emotions
 │   ├── camera.py        # Camera subscriber and frame decoder
 │   ├── poses.py         # Calibrated joint limits and pose libraries
 │   ├── vision.py        # MediaPipe gesture detection and boxing AI logic
+│   ├── arena.py         # Multi-game interactive arena (RPS, Boxer, Jedi, Bump)
 │   ├── choreography.py  # Symphony and dance choreography routines
+│   ├── sim.py           # NVIDIA Isaac Sim digital twin runner & bridge
 │   └── cli.py           # Command line entry point ('baxter')
 ├── examples/            # Standalone runnable scripts
 ├── models/              # Pretrained gesture model and audio tracks

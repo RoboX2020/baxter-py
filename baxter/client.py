@@ -127,6 +127,28 @@ class Baxter:
             "msg": msg,
             "latch": latch
         })
+        if "joint_command" in topic or "command_head_pan" in topic:
+            self._broadcast_sim(topic, msg)
+
+    def _broadcast_sim(self, topic: str, msg: dict):
+        """Broadcasts joint commands to local Isaac Sim digital twin (UDP 19888)."""
+        try:
+            if not hasattr(self, "_sim_sock") or self._sim_sock is None:
+                import socket
+                self._sim_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self._sim_sock.setblocking(False)
+
+            names = msg.get("names", [])
+            cmd = msg.get("command", [])
+            if "head_pan" in topic:
+                names = ["head_pan"]
+                cmd = [msg.get("target", 0.0)]
+
+            if names and cmd:
+                payload = json.dumps({"names": names, "command": cmd}).encode("utf-8")
+                self._sim_sock.sendto(payload, ("127.0.0.1", 19888))
+        except Exception:
+            pass
 
     async def subscribe(self, topic: str):
         await self.send_json({

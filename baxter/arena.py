@@ -507,17 +507,19 @@ class InteractiveArena:
             # Map wrist X & Y to shoulder and elbow angles
             # Y normalized [0..1] -> shoulder pitch s1 [-1.5 to -0.3 rad]
             s1_val = float(np.clip(-1.6 + (1.0 - hy) * 1.4, -1.8, -0.3))
-            # X normalized [0..1] -> shoulder roll s0 [-0.8 to 0.8 rad]
-            s0_val = float(np.clip((hx - 0.5) * 1.5, -0.8, 0.8))
             # Elbow bend e1
-            e1_val = float(np.clip(1.0 + hy * 1.2, 0.6, 2.2))
+            e1_val = float(np.clip(0.8 + hy * 1.2, 0.6, 2.0))
 
             if hx < 0.5:
-                # Control left arm
-                self.target_left = [s0_val, s1_val, -0.80, e1_val, 0.20, 0.80, 0.0]
+                # User's left (facing Baxter's right arm)
+                # s0 > 0 rolls Baxter's right arm outward to the user's left
+                s0_right = float(np.clip((0.5 - hx) * 1.8, -0.2, 0.9))
+                self.target_right = [s0_right, s1_val, 0.80, e1_val, -0.20, 0.80, 0.0]
             else:
-                # Control right arm
-                self.target_right = [s0_val, s1_val, 0.80, e1_val, -0.20, 0.80, 0.0]
+                # User's right (facing Baxter's left arm)
+                # s0 < 0 rolls Baxter's left arm outward to the user's right
+                s0_left = float(np.clip(-(hx - 0.5) * 1.8, -0.9, 0.2))
+                self.target_left = [s0_left, s1_val, -0.80, e1_val, 0.20, 0.80, 0.0]
 
     # -------------------------------------------------------------------------
     # Game Logic 4: Fist-Bump & High-Five
