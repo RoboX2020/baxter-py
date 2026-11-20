@@ -223,7 +223,7 @@ async def cmd_box(args):
         if not state.get("enabled"):
             print("[!] Enabling Baxter motors...")
             await b.enable()
-        boxer = BoxerSparring(b)
+        boxer = BoxerSparring(b, show_gui=not args.no_gui, verbose=not args.quiet)
         await boxer.run(duration_sec=args.duration)
 
 
@@ -299,6 +299,8 @@ def main():
     # box
     p_box = subparsers.add_parser("box", help="Run interactive MediaPipe boxing sparring partner")
     p_box.add_argument("--duration", type=float, default=60.0, help="Sparring round duration in seconds")
+    p_box.add_argument("--no-gui", action="store_true", help="Run in headless mode without opening OpenCV visual feed")
+    p_box.add_argument("--quiet", action="store_true", help="Suppress real-time terminal diagnostic logs")
 
     args = parser.parse_args()
 
