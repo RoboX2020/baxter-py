@@ -110,9 +110,12 @@ baxter camera snapshot -o head_cam.jpg
 baxter camera view
 ```
 
-### 6. Interactive Vision & Choreography
+### 6. Interactive Vision & Gaming Arena
 ```bash
-# Launch interactive MediaPipe boxing AI sparring session
+# Launch Baxter Interactive Arena (RPS, Boxer 2.0, Jedi Shadow Teleop, Fist-Bumps)
+baxter play
+
+# Launch standalone boxing sparring partner
 baxter box --duration 60
 
 # Run Daft Punk style 124 BPM musical dance party
@@ -121,6 +124,14 @@ baxter dance
 # Run 5-act classical orchestral symphony choreography
 baxter symphony
 ```
+
+#### Arena Hotkeys:
+* `[1]`: Arcade Reflex Boxer 2.0
+* `[2]`: Rock-Paper-Scissors Showdown (press `SPACE` to count down & throw!)
+* `[3]`: Jedi Shadow Teleoperation (moves arms live with your hands)
+* `[4]`: High-Five & Fist-Bump Partner
+* `[m]`: Toggle Selfie Mirror Reflection mode (ON / OFF)
+* `[q]` or `ESC`: Exit and return arms to neutral pose
 
 ---
 

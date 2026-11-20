@@ -10,6 +10,8 @@ from .head import Head
 from .display import Display
 from .camera import Camera
 from .choreography import SymphonyChoreography, DanceParty
+from .vision import BoxerSparring
+from .arena import InteractiveArena
 
 __version__ = "1.0.0"
 __all__ = [
@@ -18,6 +20,8 @@ __all__ = [
     "Head",
     "Display",
     "Camera",
+    "BoxerSparring",
+    "InteractiveArena",
     "SymphonyChoreography",
     "DanceParty",
     "POSES",

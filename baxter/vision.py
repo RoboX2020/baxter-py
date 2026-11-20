@@ -264,12 +264,17 @@ class BoxerSparring:
                 data_b64 = m.get("data", "")
                 if data_b64 and h > 0 and w > 0:
                     raw_bytes = base64.b64decode(data_b64)
-                    if len(raw_bytes) == h * w * 4:
+                    if len(raw_bytes) == h * w * 4 or "8" in m.get("encoding", ""):
                         frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 4))[:, :, :3]
                     elif len(raw_bytes) == h * w * 3:
                         frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 3))
                     else:
                         continue
+
+                    # Rotate 180° to fix physical chin mounting
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
+                    if getattr(self, "mirror", True):
+                        frame = cv2.flip(frame, 1)
 
                     self.latest_bgr = frame
                     self.latest_frame_time = time.time()

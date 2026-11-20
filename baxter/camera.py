@@ -52,13 +52,16 @@ class Camera:
                     continue
 
                 raw_bytes = base64.b64decode(data_b64)
-                if "8" in encoding or len(raw_bytes) == h * w * 4:
-                    # 4-channel BGRA
-                    frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 4))
-                    return frame[:, :, :3] # Return BGR
+                if len(raw_bytes) == h * w * 4 or "8" in encoding:
+                    frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 4))[:, :, :3]
                 elif len(raw_bytes) == h * w * 3:
                     frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 3))
-                    return frame
+                else:
+                    continue
+
+                if camera_name == "head_camera":
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
+                return frame
 
         return None
 
@@ -77,8 +80,13 @@ class Camera:
                 data_b64 = m.get("data", "")
                 if data_b64 and h > 0 and w > 0:
                     raw_bytes = base64.b64decode(data_b64)
-                    if len(raw_bytes) == h * w * 4:
-                        frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 4))
-                        yield frame[:, :, :3]
+                    if len(raw_bytes) == h * w * 4 or "8" in m.get("encoding", ""):
+                        frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 4))[:, :, :3]
                     elif len(raw_bytes) == h * w * 3:
-                        yield np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 3))
+                        frame = np.frombuffer(raw_bytes, dtype=np.uint8).reshape((h, w, 3))
+                    else:
+                        continue
+
+                    if camera_name == "head_camera":
+                        frame = cv2.rotate(frame, cv2.ROTATE_180)
+                    yield frame

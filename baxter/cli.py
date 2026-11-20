@@ -227,6 +227,17 @@ async def cmd_box(args):
         await boxer.run(duration_sec=args.duration)
 
 
+async def cmd_play(args):
+    from .arena import InteractiveArena
+    async with Baxter(host=args.host, port=args.port) as b:
+        state = await b.get_state()
+        if not state.get("enabled"):
+            print("[!] Enabling Baxter motors...")
+            await b.enable()
+        arena = InteractiveArena(b, mirror=not args.no_mirror, show_gui=not args.no_gui)
+        await arena.run(duration_sec=args.duration)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="baxter",
@@ -302,6 +313,17 @@ def main():
     p_box.add_argument("--no-gui", action="store_true", help="Run in headless mode without opening OpenCV visual feed")
     p_box.add_argument("--quiet", action="store_true", help="Suppress real-time terminal diagnostic logs")
 
+    # play / arena
+    p_play = subparsers.add_parser("play", help="Launch Baxter Interactive Arena (Rock-Paper-Scissors, Boxer 2.0, Jedi Teleop, Fist-Bump)")
+    p_play.add_argument("--duration", type=float, default=300.0, help="Session duration in seconds (default: 300)")
+    p_play.add_argument("--no-mirror", action="store_true", help="Disable selfie mirror reflection mode")
+    p_play.add_argument("--no-gui", action="store_true", help="Run in headless mode without desktop OpenCV window")
+
+    p_arena = subparsers.add_parser("arena", help="Alias for 'play'")
+    p_arena.add_argument("--duration", type=float, default=300.0, help="Session duration in seconds (default: 300)")
+    p_arena.add_argument("--no-mirror", action="store_true", help="Disable selfie mirror reflection mode")
+    p_arena.add_argument("--no-gui", action="store_true", help="Run in headless mode without desktop OpenCV window")
+
     args = parser.parse_args()
 
     dispatch = {
@@ -319,6 +341,8 @@ def main():
         "dance": cmd_dance,
         "symphony": cmd_symphony,
         "box": cmd_box,
+        "play": cmd_play,
+        "arena": cmd_play,
     }
 
     fn = dispatch.get(args.command)
