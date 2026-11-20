@@ -14,7 +14,8 @@ gains on first run.
 |---|---|
 | `baxter_upstream.urdf` | Verbatim upstream Baxter URDF from Rethink Robotics' `baxter_common` (uses ROS `package://` mesh paths; kept for provenance). |
 | `baxter_isaac.urdf` | Same robot, with mesh paths rewritten to relative `meshes/` so no ROS package resolution is needed. Import THIS one. |
-| `meshes/` | The 13 COLLADA meshes the URDF references (visual + collision). Unreferenced STL duplicates, xacro sources and ROS build files from upstream are omitted; get them from the upstream repo if needed. |
+| `meshes/` | The 13 COLLADA meshes the URDF references (visual + collision). Two are committed here; the other 11 are pulled in by `tools/fetch_meshes.sh` (run it once, see Quickstart). Unreferenced STL duplicates, xacro sources and ROS build files from upstream are omitted. |
+| `tools/fetch_meshes.sh` | Downloads the 13 meshes from the upstream repo, pinned to an exact commit, and verifies each file's SHA-256. Run once before importing the URDF. |
 | `package.xml.baxter_description` | Upstream package metadata (version, maintainers) for provenance. |
 | `LICENSE.baxter_description` | BSD 3-Clause license for the robot model assets (Rethink Robotics). |
 | `isaac/poses.json` | Joint names, joint limits and the full `baxter-py` pose library (neutral, tuck, wave, reach, cheer, salute, boxing), extracted from `baxter/poses.py`. All 14 arm joint limits verified to match the URDF. |
@@ -23,6 +24,10 @@ gains on first run.
 
 ## Quickstart
 
+0. Fetch the meshes (one time, needs `curl` and ~40 MB):
+   `bash sim/tools/fetch_meshes.sh`
+   This downloads the COLLADA meshes from RethinkRobotics/baxter_common at a
+   pinned commit and verifies every file's SHA-256 before keeping it.
 1. Open Isaac Sim (current 4.x/5.x releases) and enable the **URDF Importer**
    extension (`isaacsim.asset.importer.urdf`) if it is not already on.
 2. Import `sim/baxter_isaac.urdf` (File -> Import, or the URDF Importer panel).
@@ -70,5 +75,7 @@ above.
 
 - Robot model: [RethinkRobotics/baxter_common](https://github.com/RethinkRobotics/baxter_common)
   (`baxter_description`), BSD 3-Clause. Copyright (c) 2013-2015 Rethink Robotics.
-  License text retained in `LICENSE.baxter_description` as required.
+  License text retained in `LICENSE.baxter_description` as required. Meshes are
+  fetched from that repo at a pinned commit by `tools/fetch_meshes.sh` rather
+  than all being vendored here.
 - Everything else in `sim/isaac/` is part of `baxter-py` (MIT).
