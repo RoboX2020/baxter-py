@@ -254,6 +254,11 @@ def cmd_sim(args):
     )
 
 
+def cmd_hud(args):
+    from .hud import main as run_hud
+    run_hud()
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="baxter",
@@ -351,6 +356,9 @@ def main():
     p_sim.add_argument("--screenshot", default=None, help="Capture RTX photorealistic screenshot to file and exit")
     p_sim.add_argument("--pose", default="neutral", choices=["neutral", "wave", "boxing", "hero"], help="Robot pose for screenshot (default: neutral)")
 
+    # hud
+    p_hud = subparsers.add_parser("hud", help="Launch interactive floating control HUD for Sim-to-Real")
+
     args = parser.parse_args()
 
     dispatch = {
@@ -371,6 +379,7 @@ def main():
         "play": cmd_play,
         "arena": cmd_play,
         "sim": cmd_sim,
+        "hud": cmd_hud,
     }
 
     fn = dispatch.get(args.command)

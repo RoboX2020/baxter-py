@@ -30,6 +30,10 @@ parser.add_argument("--headless", action="store_true", help="Run without opening
 add_launcher_args(parser)
 args_cli = parser.parse_args()
 
+# Enable 3D Kit visualizer window when not headless
+if not args_cli.headless and not args_cli.visualizer:
+    args_cli.visualizer = ["kit"]
+
 
 # Joint definitions and physical safety limits (radians)
 JOINTS = {
@@ -492,11 +496,25 @@ def udp_parallel_cmd_thread(port: int):
             try:
                 data, _ = sock.recvfrom(4096)
                 payload = json.loads(data.decode("utf-8"))
-                names = payload.get("names", [])
-                cmd = payload.get("command", [])
-                with state_lock:
-                    for n, c in zip(names, cmd):
-                        sim_target_positions[n] = float(c)
+                
+                # Support direct key action trigger
+                if "key" in payload:
+                    handle_key_action(payload["key"])
+
+                # Support named pose trigger
+                elif "pose" in payload:
+                    pose_map = {"neutral": "1", "wave": "2", "boxing": "3", "cheer": "4", "reach": "5", "tuck": "0"}
+                    pk = pose_map.get(str(payload["pose"]).lower())
+                    if pk:
+                        handle_key_action(pk)
+
+                # Support explicit joint angles
+                else:
+                    names = payload.get("names", [])
+                    cmd = payload.get("command", [])
+                    with state_lock:
+                        for n, c in zip(names, cmd):
+                            sim_target_positions[n] = float(c)
             except Exception:
                 pass
 
