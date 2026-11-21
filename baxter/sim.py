@@ -13,7 +13,8 @@ from typing import List, Optional
 
 
 DEFAULT_ISAAC_LAB_DIR = os.environ.get("ISAACLAB_PATH", "/home/robotics/isaac/IsaacLab")
-DEFAULT_TWIN_SCRIPT = os.path.join(os.path.dirname(DEFAULT_ISAAC_LAB_DIR), "isaac_baxter_twin.py")
+PACKAGE_TWIN_SCRIPT = os.path.join(os.path.dirname(__file__), "isaac_twin.py")
+DEFAULT_TWIN_SCRIPT = PACKAGE_TWIN_SCRIPT if os.path.exists(PACKAGE_TWIN_SCRIPT) else os.path.join(os.path.dirname(DEFAULT_ISAAC_LAB_DIR), "isaac_baxter_twin.py")
 DEFAULT_RENDER_SCRIPT = os.path.join(os.path.dirname(DEFAULT_ISAAC_LAB_DIR), "render_isaac_baxter_showcase.py")
 GOMP_LIB = "/lib/aarch64-linux-gnu/libgomp.so.1"
 

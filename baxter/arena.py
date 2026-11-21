@@ -133,6 +133,10 @@ class InteractiveArena:
         self.target_right: List[float] = list(POSES["neutral"]["right"])
         self.target_head_pan: float = 0.0
 
+        # Jedi mode scene flip configuration (flip horizontally and vertically)
+        self.jedi_flip_h = True
+        self.jedi_flip_v = True
+
         # Game State - RPS
         self.rps_phase = "idle" # idle, countdown, shoot, result
         self.rps_count_val = 3
@@ -370,6 +374,11 @@ class InteractiveArena:
         elif self.current_mode == 3: # Jedi
             banner_text = "JEDI SHADOW PUPPET: MOVE BOTH HANDS"
             banner_color = (255, 0, 220)
+            flip_parts = []
+            if self.jedi_flip_h: flip_parts.append("H")
+            if self.jedi_flip_v: flip_parts.append("V")
+            flip_str = "+".join(flip_parts) if flip_parts else "OFF"
+            cv2.putText(out, f"FLIP: {flip_str} ([m]/[v])", (w - 240, h - 16), cv2.FONT_HERSHEY_DUPLEX, 0.55, (0, 255, 200), 1, cv2.LINE_AA)
 
         elif self.current_mode == 4: # Bump
             banner_text = "HOLD OUT A FIST OR RAISE HIGH-FIVE!"
@@ -662,6 +671,15 @@ class InteractiveArena:
 
                 frame = self.latest_bgr.copy()
 
+                # For Jedi mode: flip scene horizontally and vertically
+                if self.current_mode == 3:
+                    if self.jedi_flip_h and self.jedi_flip_v:
+                        frame = cv2.flip(frame, -1)
+                    elif self.jedi_flip_h:
+                        frame = cv2.flip(frame, 1)
+                    elif self.jedi_flip_v:
+                        frame = cv2.flip(frame, 0)
+
                 # Run MediaPipe hand detection
                 detections = self.detector.detect(frame)
                 top_gesture = None
@@ -718,7 +736,8 @@ class InteractiveArena:
                     elif key == ord('3'):
                         self.current_mode = 3
                         play_sound("whoosh")
-                        print("[*] Mode switched to: 🪄 JEDI SHADOW PUPPETEER")
+                        print("[*] Mode switched to: 🪄 JEDI SHADOW PUPPETEER (Scene flipped H+V)")
+                        print("    Hotkeys: [m] Toggle Horizontal Flip | [v] Toggle Vertical Flip | [f] Toggle Both")
                     elif key == ord('4'):
                         self.current_mode = 4
                         play_sound("ding")
@@ -727,8 +746,20 @@ class InteractiveArena:
                         if self.current_mode == 2:
                             self._trigger_rps_round()
                     elif key == ord('m'):
-                        self.mirror = not self.mirror
-                        print(f"[*] Mirror mode: {'ON' if self.mirror else 'OFF'}")
+                        if self.current_mode == 3:
+                            self.jedi_flip_h = not self.jedi_flip_h
+                            print(f"[*] Jedi horizontal flip: {'ON' if self.jedi_flip_h else 'OFF'}")
+                        else:
+                            self.mirror = not self.mirror
+                            print(f"[*] Mirror mode: {'ON' if self.mirror else 'OFF'}")
+                    elif key == ord('v'):
+                        self.jedi_flip_v = not self.jedi_flip_v
+                        print(f"[*] Jedi vertical flip: {'ON' if self.jedi_flip_v else 'OFF'}")
+                    elif key == ord('f'):
+                        both = not (self.jedi_flip_h and self.jedi_flip_v)
+                        self.jedi_flip_h = both
+                        self.jedi_flip_v = both
+                        print(f"[*] Jedi full flip (H+V): {'ON' if both else 'OFF'}")
 
                 await asyncio.sleep(0.015)
 

@@ -129,6 +129,9 @@ baxter symphony
 * `[1]`: Arcade Reflex Boxer 2.0
 * `[2]`: Rock-Paper-Scissors Showdown (press `SPACE` to count down & throw!)
 * `[3]`: Jedi Shadow Teleoperation (intuitive 1:1 dual-arm mirroring with force push recoil)
+  * `[m]`: Toggle horizontal flip
+  * `[v]`: Toggle vertical flip
+  * `[f]`: Toggle full flip (H+V)
 * `[4]`: High-Five & Fist-Bump Partner
 * `[m]`: Toggle Selfie Mirror Reflection mode (ON / OFF)
 * `[q]` or `ESC`: Exit and return arms to neutral pose
@@ -143,12 +146,35 @@ baxter sim
 # Launch in headless mode (background physics & telemetry)
 baxter sim --headless
 
-# Enable bidirectional sim-to-real commanding (sim controls real Baxter)
+# Enable bidirectional sim-to-real commanding (sim controls physical Baxter with keyboard controls)
 baxter sim --sim-to-real
 
 # Render an instant photorealistic RTX viewport screenshot to disk
 baxter sim --screenshot ./docs/screenshots/my_render.png --pose wave
 ```
+
+#### Sim-to-Real Interactive Keyboard Controls:
+When running `baxter sim --sim-to-real`, you can directly teleoperate Baxter inside Isaac Sim while physical Baxter mirrors every movement in real-time at 40 Hz:
+
+| Key Command | Action |
+| :--- | :--- |
+| **`[1]`** | Neutral / Ready Stance (symmetrical operational pose) |
+| **`[2]`** | Wave Gesture (right arm elevated, head turned) |
+| **`[3]`** | Boxing Guard (arms forward, fists up) |
+| **`[4]`** | Cheer / Victory Stance |
+| **`[5]`** | Reach Forward |
+| **`[0]`** | Tuck Arms (compact shipping pose) |
+| **`[Tab]`** or **`[Space]`** | Toggle Active Arm (`RIGHT` $\leftrightarrow$ `LEFT`) |
+| **`[q, w, e, r, t, y, u]`** | Select Joint: `[q]`=s0, `[w]`=s1, `[e]`=e0, `[r]`=e1, `[t]`=w0, `[y]`=w1, `[u]`=w2 |
+| **`[+]`** / **`[-]`** or **`[k]`** / **`[j]`** | Jog selected joint by $\pm 5^\circ$ |
+| **`[W]`** / **`[S]`** | Direct Shoulder Pitch (Arm UP / DOWN) |
+| **`[A]`** / **`[D]`** | Direct Shoulder Pan (Arm OUTWARD / INWARD) |
+| **`[R]`** / **`[F]`** | Direct Elbow Pitch (Elbow FLEX / EXTEND) |
+| **`[[]`** / **`[]]`** | Pan Head Left / Right |
+| **`[c]`** | Center Head Pan |
+| **`[m]`** | Toggle Sim-to-Real synchronization ON / OFF |
+| **`[h]`** | Display in-terminal hotkey help cheat sheet |
+| **`[Esc]`** or **`[x]`** | Safely stop simulation |
 
 #### Supported Screenshot Poses:
 * `neutral`: Operational neutral posture with elbows flexed and head centered.
