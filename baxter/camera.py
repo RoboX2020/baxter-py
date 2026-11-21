@@ -5,7 +5,7 @@ Connects to Baxter's onboard cameras (head_camera, left_hand_camera, right_hand_
 
 import base64
 import asyncio
-from typing import Optional, Tuple, AsyncIterator
+from typing import Optional, Tuple, AsyncIterator, Union
 import numpy as np
 import cv2
 
@@ -65,8 +65,35 @@ class Camera:
 
         return None
 
-    async def stream(self, camera_name: str = "head_camera") -> AsyncIterator[np.ndarray]:
-        """Async generator that yields decoded BGR frames as they arrive."""
+    async def stream(self, camera_name: Union[str, int] = "head_camera") -> AsyncIterator[np.ndarray]:
+        """
+        Async generator that yields decoded BGR frames as they arrive.
+        Supports both Baxter onboard cameras ('head_camera', 'left_hand_camera', etc.)
+        and local external USB cameras (e.g. 0, '0', or '/dev/video0').
+        """
+        # 1. Local USB / External Camera
+        is_usb = isinstance(camera_name, int) or (isinstance(camera_name, str) and (camera_name.isdigit() or "/dev/video" in camera_name))
+        if is_usb:
+            dev_idx = int(camera_name) if str(camera_name).isdigit() else camera_name
+            cap = cv2.VideoCapture(dev_idx)
+            if not cap.isOpened():
+                raise RuntimeError(f"Could not open external camera {camera_name}")
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            try:
+                loop = asyncio.get_event_loop()
+                while self.baxter.is_connected or True:
+                    ret, frame = await loop.run_in_executor(None, cap.read)
+                    if not ret:
+                        await asyncio.sleep(0.01)
+                        continue
+                    yield frame
+                    await asyncio.sleep(0.001)
+            finally:
+                cap.release()
+            return
+
+        # 2. Baxter Onboard Network Camera via Rosbridge WebSocket
         topic = f"/cameras/{camera_name}/image"
         await self.baxter.subscribe(topic)
         import json

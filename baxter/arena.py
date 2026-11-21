@@ -88,6 +88,7 @@ class InteractiveArena:
         self,
         baxter: "Baxter",
         model_path: Optional[str] = None,
+        camera_source: Union[int, str] = "auto",
         mirror: bool = True,
         show_gui: bool = True
     ):
@@ -95,6 +96,21 @@ class InteractiveArena:
         self.detector = GestureDetector(model_path)
         self.mirror = mirror
         self.show_gui = show_gui
+
+        # Auto-detect camera: prefer external USB camera (0) if available
+        if camera_source == "auto":
+            try:
+                _test_cap = cv2.VideoCapture(0)
+                if _test_cap.isOpened():
+                    _ret, _ = _test_cap.read()
+                    self.camera_source = 0 if _ret else "head_camera"
+                else:
+                    self.camera_source = "head_camera"
+                _test_cap.release()
+            except Exception:
+                self.camera_source = "head_camera"
+        else:
+            self.camera_source = camera_source
 
         # Available Game Modes:
         # 1: BOXING, 2: RPS, 3: JEDI_MIRROR, 4: BUMP_AND_FIVE
@@ -143,7 +159,44 @@ class InteractiveArena:
         self.smooth_teleop_r = list(POSES["neutral"]["right"])
 
     async def _camera_receiver(self):
-        """Dedicated background task: Reads camera frames from WebSocket, rotates 180, and mirrors."""
+        """Dedicated background task: Ingests frames from external USB camera or Baxter head camera."""
+        is_usb = isinstance(self.camera_source, int) or (isinstance(self.camera_source, str) and (self.camera_source.isdigit() or "/dev/video" in self.camera_source))
+        if is_usb:
+            dev_idx = int(self.camera_source) if str(self.camera_source).isdigit() else self.camera_source
+            cap = cv2.VideoCapture(dev_idx)
+            if not cap.isOpened():
+                self.camera_source = "head_camera"
+            else:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                t_fps_start = time.time()
+                fps_counter = 0
+                loop = asyncio.get_event_loop()
+
+                while self.running:
+                    ret, frame = await loop.run_in_executor(None, cap.read)
+                    if not ret:
+                        await asyncio.sleep(0.01)
+                        continue
+
+                    if self.mirror:
+                        frame = cv2.flip(frame, 1)
+
+                    self.latest_bgr = frame
+                    self.latest_frame_time = time.time()
+                    fps_counter += 1
+
+                    now = time.time()
+                    if now - t_fps_start >= 1.0:
+                        self.camera_fps = fps_counter / (now - t_fps_start)
+                        fps_counter = 0
+                        t_fps_start = now
+
+                    await asyncio.sleep(0.005)
+
+                cap.release()
+                return
+
         topic = "/cameras/head_camera/image"
         await self.baxter.subscribe(topic)
 

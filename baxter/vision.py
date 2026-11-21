@@ -9,7 +9,7 @@ import time
 import math
 import base64
 import asyncio
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Union
 import numpy as np
 import cv2
 
@@ -202,6 +202,7 @@ class BoxerSparring:
         self,
         baxter: "Baxter",
         model_path: Optional[str] = None,
+        camera_source: Union[int, str] = "auto",
         show_gui: bool = True,
         verbose: bool = True
     ):
@@ -209,6 +210,21 @@ class BoxerSparring:
         self.detector = GestureDetector(model_path)
         self.show_gui = show_gui
         self.verbose = verbose
+
+        # Auto-detect camera: prefer external USB camera (0) if available
+        if camera_source == "auto":
+            try:
+                _test_cap = cv2.VideoCapture(0)
+                if _test_cap.isOpened():
+                    _ret, _ = _test_cap.read()
+                    self.camera_source = 0 if _ret else "head_camera"
+                else:
+                    self.camera_source = "head_camera"
+                _test_cap.release()
+            except Exception:
+                self.camera_source = "head_camera"
+        else:
+            self.camera_source = camera_source
 
         # Shared state buffers
         self.latest_bgr: Optional[np.ndarray] = None
@@ -236,7 +252,50 @@ class BoxerSparring:
             print(f"[{ts}] [{tag}] {msg}")
 
     async def _camera_receiver(self):
-        """Dedicated background task: Reads camera frames from WebSocket without blocking."""
+        """Dedicated background task: Ingests frames from external USB camera or Baxter head camera."""
+        # 1. External USB Camera Source
+        is_usb = isinstance(self.camera_source, int) or (isinstance(self.camera_source, str) and (self.camera_source.isdigit() or "/dev/video" in self.camera_source))
+        if is_usb:
+            dev_idx = int(self.camera_source) if str(self.camera_source).isdigit() else self.camera_source
+            cap = cv2.VideoCapture(dev_idx)
+            if not cap.isOpened():
+                self._log("CAMERA", f"Failed to open USB camera {self.camera_source}, falling back to head_camera...")
+                self.camera_source = "head_camera"
+            else:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                self._log("CAMERA", f"Connected to external USB camera (index {dev_idx}) at 30 FPS.")
+                t_fps_start = time.time()
+                fps_counter = 0
+                loop = asyncio.get_event_loop()
+
+                while self.running:
+                    ret, frame = await loop.run_in_executor(None, cap.read)
+                    if not ret:
+                        await asyncio.sleep(0.01)
+                        continue
+
+                    # Mirror for intuitive human interaction
+                    if getattr(self, "mirror", True):
+                        frame = cv2.flip(frame, 1)
+
+                    self.latest_bgr = frame
+                    self.latest_frame_time = time.time()
+                    self.frame_count += 1
+                    fps_counter += 1
+
+                    now = time.time()
+                    if now - t_fps_start >= 1.0:
+                        self.camera_fps = fps_counter / (now - t_fps_start)
+                        fps_counter = 0
+                        t_fps_start = now
+
+                    await asyncio.sleep(0.005)
+
+                cap.release()
+                return
+
+        # 2. Onboard Baxter Head Camera via WebSocket
         topic = "/cameras/head_camera/image"
         await self.baxter.subscribe(topic)
         self._log("CAMERA", "Subscribed to /cameras/head_camera/image. Starting frame ingestion...")

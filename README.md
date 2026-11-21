@@ -137,15 +137,34 @@ baxter symphony
 Launch an NVIDIA Isaac Sim 3D digital twin of Baxter running in parallel with the physical robot:
 
 ```bash
-# Launch interactive 3D digital twin in Isaac Sim
+# Launch interactive 3D digital twin in Isaac Sim (auto-detects display)
 baxter sim
 
 # Launch in headless mode (background physics & telemetry)
 baxter sim --headless
 
-# Enable bidirectional sim-to-real commanding
+# Enable bidirectional sim-to-real commanding (sim controls real Baxter)
 baxter sim --sim-to-real
+
+# Render an instant photorealistic RTX viewport screenshot to disk
+baxter sim --screenshot ./docs/screenshots/my_render.png --pose wave
 ```
+
+#### Supported Screenshot Poses:
+* `neutral`: Operational neutral posture with elbows flexed and head centered.
+* `wave`: Right arm elevated in welcoming gesture with head tracking viewer.
+* `boxing`: Dual-arm guard stance with forearms forward and fists up.
+* `hero`: Full-body front-isometric showcase stance with pedestal.
+
+#### Visual Gallery (RTX Viewport Renders):
+
+| Neutral Stance | Waving Gesture |
+| :---: | :---: |
+| ![Baxter Neutral](docs/screenshots/baxter_isaac_sim_neutral.png) | ![Baxter Wave](docs/screenshots/baxter_isaac_sim_wave.png) |
+
+| Boxing Guard | Hero Showcase |
+| :---: | :---: |
+| ![Baxter Boxing](docs/screenshots/baxter_isaac_sim_boxing.png) | ![Baxter Hero](docs/screenshots/baxter_isaac_sim_hero.png) |
 
 #### Parallel Execution:
 * **Real-to-Sim**: Physical Baxter encoder states (`/robot/joint_states`) continuously stream into Isaac Sim at 60+ FPS, faithfully mirroring physical motion, external forces, and human teleoperation.

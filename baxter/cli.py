@@ -218,23 +218,25 @@ async def cmd_symphony(args):
 
 async def cmd_box(args):
     from .vision import BoxerSparring
+    cam_src = int(args.camera) if str(args.camera).isdigit() else args.camera
     async with Baxter(host=args.host, port=args.port) as b:
         state = await b.get_state()
         if not state.get("enabled"):
             print("[!] Enabling Baxter motors...")
             await b.enable()
-        boxer = BoxerSparring(b, show_gui=not args.no_gui, verbose=not args.quiet)
+        boxer = BoxerSparring(b, camera_source=cam_src, show_gui=not args.no_gui, verbose=not args.quiet)
         await boxer.run(duration_sec=args.duration)
 
 
 async def cmd_play(args):
     from .arena import InteractiveArena
+    cam_src = int(args.camera) if str(args.camera).isdigit() else args.camera
     async with Baxter(host=args.host, port=args.port) as b:
         state = await b.get_state()
         if not state.get("enabled"):
             print("[!] Enabling Baxter motors...")
             await b.enable()
-        arena = InteractiveArena(b, mirror=not args.no_mirror, show_gui=not args.no_gui)
+        arena = InteractiveArena(b, camera_source=cam_src, mirror=not args.no_mirror, show_gui=not args.no_gui)
         await arena.run(duration_sec=args.duration)
 
 
@@ -246,7 +248,9 @@ def cmd_sim(args):
         port=args.port,
         udp_port=args.udp_port,
         headless=args.headless,
-        sim_to_real=args.sim_to_real
+        sim_to_real=args.sim_to_real,
+        screenshot=args.screenshot,
+        pose=args.pose
     )
 
 
@@ -322,17 +326,20 @@ def main():
     # box
     p_box = subparsers.add_parser("box", help="Run interactive MediaPipe boxing sparring partner")
     p_box.add_argument("--duration", type=float, default=60.0, help="Sparring round duration in seconds")
+    p_box.add_argument("--camera", "--cam", default="auto", help="Camera source: 0 for USB external webcam, head for Baxter head cam (default: auto)")
     p_box.add_argument("--no-gui", action="store_true", help="Run in headless mode without opening OpenCV visual feed")
     p_box.add_argument("--quiet", action="store_true", help="Suppress real-time terminal diagnostic logs")
 
     # play / arena
     p_play = subparsers.add_parser("play", help="Launch Baxter Interactive Arena (Rock-Paper-Scissors, Boxer 2.0, Jedi Teleop, Fist-Bump)")
     p_play.add_argument("--duration", type=float, default=300.0, help="Session duration in seconds (default: 300)")
+    p_play.add_argument("--camera", "--cam", default="auto", help="Camera source: 0 for USB external webcam, head for Baxter head cam (default: auto)")
     p_play.add_argument("--no-mirror", action="store_true", help="Disable selfie mirror reflection mode")
     p_play.add_argument("--no-gui", action="store_true", help="Run in headless mode without desktop OpenCV window")
 
     p_arena = subparsers.add_parser("arena", help="Alias for 'play'")
     p_arena.add_argument("--duration", type=float, default=300.0, help="Session duration in seconds (default: 300)")
+    p_arena.add_argument("--camera", "--cam", default="auto", help="Camera source: 0 for USB external webcam, head for Baxter head cam (default: auto)")
     p_arena.add_argument("--no-mirror", action="store_true", help="Disable selfie mirror reflection mode")
     p_arena.add_argument("--no-gui", action="store_true", help="Run in headless mode without desktop OpenCV window")
 
@@ -341,6 +348,8 @@ def main():
     p_sim.add_argument("--headless", action="store_true", help="Run in headless mode without opening GUI window")
     p_sim.add_argument("--udp-port", type=int, default=19888, help="Local UDP parallel command port (default: 19888)")
     p_sim.add_argument("--sim-to-real", action="store_true", help="Enable commanding physical robot from simulation")
+    p_sim.add_argument("--screenshot", default=None, help="Capture RTX photorealistic screenshot to file and exit")
+    p_sim.add_argument("--pose", default="neutral", choices=["neutral", "wave", "boxing", "hero"], help="Robot pose for screenshot (default: neutral)")
 
     args = parser.parse_args()
 
