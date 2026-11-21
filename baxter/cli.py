@@ -259,6 +259,14 @@ def cmd_hud(args):
     run_hud()
 
 
+def cmd_track(args):
+    from .track import Fingertip3DTracker
+    cam_id = int(args.camera) if str(args.camera).isdigit() else 0
+    tracker = Fingertip3DTracker(camera_id=cam_id, udp_port=args.udp_port)
+    tracker.active_arm = args.arm.lower()
+    tracker.run()
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="baxter",
@@ -359,6 +367,12 @@ def main():
     # hud
     p_hud = subparsers.add_parser("hud", help="Launch interactive floating control HUD for Sim-to-Real")
 
+    # track
+    p_track = subparsers.add_parser("track", help="Launch 3D fingertip spatial tracker & Sim-to-Real teleoperation")
+    p_track.add_argument("--camera", default=0, help="Webcam device index (default: 0)")
+    p_track.add_argument("--arm", default="right", choices=["right", "left"], help="Active control arm (default: right)")
+    p_track.add_argument("--udp-port", type=int, default=19888, help="UDP port for Isaac Sim bridge (default: 19888)")
+
     args = parser.parse_args()
 
     dispatch = {
@@ -380,6 +394,7 @@ def main():
         "arena": cmd_play,
         "sim": cmd_sim,
         "hud": cmd_hud,
+        "track": cmd_track,
     }
 
     fn = dispatch.get(args.command)

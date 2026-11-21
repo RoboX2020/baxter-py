@@ -198,7 +198,25 @@ When running `baxter sim --sim-to-real`, you can directly teleoperate Baxter ins
 
 ---
 
-## Python API Usage
+### 8. 3D Fingertip Spatial Tracker & Sim-to-Real Teleoperation
+Map your index fingertip in 3D metric space $(X, Y, Z)$ using a monocular camera and teleoperate Baxter in real-time across Isaac Sim and physical hardware:
+
+```bash
+# Launch live 3D fingertip tracking and Sim-to-Real teleoperation
+baxter track
+
+# Specify active arm and camera index
+baxter track --arm left --camera 0
+```
+
+#### Features:
+* **3D Metric Spatial Reconstruction**: Computes physical $(X, Y, Z)$ coordinates in meters relative to the camera using perspective projection and human anatomical knuckle scale.
+* **Isometric 3D Workspace HUD**: Live visualizer rendering the 3D trajectory trail and real-time bounding volume.
+* **Pinch-to-Engage & Continuous Modes**: Supports continuous tracking as well as pinch-to-engage clutch control (press `[e]` to toggle).
+* **Arm Switching**: Press `[Tab]` or `[Space]` to toggle between Right and Left arm teleoperation.
+* **Sim-to-Real Streaming**: Streams motion concurrently to NVIDIA Isaac Sim (`127.0.0.1:19888`) and physical Baxter motors.
+
+### 9. Python API Usage
 
 ### Quickstart Example
 
