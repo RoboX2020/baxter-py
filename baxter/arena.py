@@ -133,9 +133,9 @@ class InteractiveArena:
         self.target_right: List[float] = list(POSES["neutral"]["right"])
         self.target_head_pan: float = 0.0
 
-        # Jedi mode scene flip configuration (flip horizontally and vertically)
-        self.jedi_flip_h = True
-        self.jedi_flip_v = True
+        # Scene flip overrides (disabled by default; incoming camera is already naturally mirrored)
+        self.jedi_flip_h = False
+        self.jedi_flip_v = False
 
         # Game State - RPS
         self.rps_phase = "idle" # idle, countdown, shoot, result
@@ -374,11 +374,8 @@ class InteractiveArena:
         elif self.current_mode == 3: # Jedi
             banner_text = "JEDI SHADOW PUPPET: MOVE BOTH HANDS"
             banner_color = (255, 0, 220)
-            flip_parts = []
-            if self.jedi_flip_h: flip_parts.append("H")
-            if self.jedi_flip_v: flip_parts.append("V")
-            flip_str = "+".join(flip_parts) if flip_parts else "OFF"
-            cv2.putText(out, f"FLIP: {flip_str} ([m]/[v])", (w - 240, h - 16), cv2.FONT_HERSHEY_DUPLEX, 0.55, (0, 255, 200), 1, cv2.LINE_AA)
+            score_badge = "1:1 MIRROR TELEOP ACTIVE"
+            cv2.putText(out, score_badge, (w - 270, h - 16), cv2.FONT_HERSHEY_DUPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
         elif self.current_mode == 4: # Bump
             banner_text = "HOLD OUT A FIST OR RAISE HIGH-FIVE!"
@@ -498,7 +495,7 @@ class InteractiveArena:
         boxing_poses = POSES["boxing"]
 
         # Smooth head tracking
-        target_pan = float(np.clip((0.5 - hand_x) * 1.5, -0.65, 0.65))
+        target_pan = float(np.clip((hand_x - 0.5) * 1.5, -0.65, 0.65))
         self.target_head_pan = target_pan
 
         if now > self.box_action_until and now - self.last_action_time > 0.7:
@@ -566,22 +563,25 @@ class InteractiveArena:
                 self.target_right = list(ARENA_POSES["force_recoil"]["right"])
                 return
 
-            # Map wrist X & Y to shoulder and elbow angles
-            # Y normalized [0..1] -> shoulder pitch s1 [-1.5 to -0.3 rad]
-            s1_val = float(np.clip(-1.6 + (1.0 - hy) * 1.4, -1.8, -0.3))
-            # Elbow bend e1
-            e1_val = float(np.clip(0.8 + hy * 1.2, 0.6, 2.0))
+            # Vertical shoulder pitch mapping:
+            # Hand UP (hy small ~0.15) -> arm raises UP (s1 more negative: -1.4 rad)
+            # Hand DOWN (hy large ~0.85) -> arm lowers DOWN (s1 less negative: -0.3 rad)
+            s1_val = float(np.clip(-1.5 + hy * 1.4, -1.7, -0.2))
+            e1_val = float(np.clip(0.7 + hy * 1.0, 0.6, 1.8))
 
-            if hx < 0.5:
-                # User's left (facing Baxter's right arm)
-                # s0 > 0 rolls Baxter's right arm outward to the user's left
-                s0_right = float(np.clip((0.5 - hx) * 1.8, -0.2, 0.9))
-                self.target_right = [s0_right, s1_val, 0.80, e1_val, -0.20, 0.80, 0.0]
-            else:
-                # User's right (facing Baxter's left arm)
-                # s0 < 0 rolls Baxter's left arm outward to the user's right
-                s0_left = float(np.clip(-(hx - 0.5) * 1.8, -0.9, 0.2))
+            # Horizontal shoulder roll mapping:
+            # Hand moves RIGHT (larger hx) -> arm moves to user's RIGHT (more positive s0)
+            # Hand moves LEFT (smaller hx) -> arm moves to user's LEFT (more negative s0)
+            if hx >= 0.5:
+                # User's right hand (facing Baxter's left arm)
+                # Positive left_s0 rolls outward to Baxter's left (user's right)
+                s0_left = float(np.clip((hx - 0.5) * 2.0, -0.3, 0.9))
                 self.target_left = [s0_left, s1_val, -0.80, e1_val, 0.20, 0.80, 0.0]
+            else:
+                # User's left hand (facing Baxter's right arm)
+                # Negative right_s0 rolls outward to Baxter's right (user's left)
+                s0_right = float(np.clip((hx - 0.5) * 2.0, -0.9, 0.3))
+                self.target_right = [s0_right, s1_val, 0.80, e1_val, -0.20, 0.80, 0.0]
 
     # -------------------------------------------------------------------------
     # Game Logic 4: Fist-Bump & High-Five
@@ -736,8 +736,9 @@ class InteractiveArena:
                     elif key == ord('3'):
                         self.current_mode = 3
                         play_sound("whoosh")
-                        print("[*] Mode switched to: 🪄 JEDI SHADOW PUPPETEER (Scene flipped H+V)")
-                        print("    Hotkeys: [m] Toggle Horizontal Flip | [v] Toggle Vertical Flip | [f] Toggle Both")
+                        print("[*] Mode switched to: 🪄 JEDI SHADOW PUPPETEER")
+                        print("    Move your hands to control Baxter's arms in 1:1 lockstep mirror mode.")
+                        print("    Hotkeys: [m] Toggle Mirror Reflection | [h] Invert Horizontal | [v] Invert Vertical")
                     elif key == ord('4'):
                         self.current_mode = 4
                         play_sound("ding")
@@ -746,20 +747,14 @@ class InteractiveArena:
                         if self.current_mode == 2:
                             self._trigger_rps_round()
                     elif key == ord('m'):
-                        if self.current_mode == 3:
-                            self.jedi_flip_h = not self.jedi_flip_h
-                            print(f"[*] Jedi horizontal flip: {'ON' if self.jedi_flip_h else 'OFF'}")
-                        else:
-                            self.mirror = not self.mirror
-                            print(f"[*] Mirror mode: {'ON' if self.mirror else 'OFF'}")
+                        self.mirror = not self.mirror
+                        print(f"[*] Mirror mode: {'ON' if self.mirror else 'OFF'}")
+                    elif key == ord('h'):
+                        self.jedi_flip_h = not self.jedi_flip_h
+                        print(f"[*] Horizontal invert: {'ON' if self.jedi_flip_h else 'OFF'}")
                     elif key == ord('v'):
                         self.jedi_flip_v = not self.jedi_flip_v
-                        print(f"[*] Jedi vertical flip: {'ON' if self.jedi_flip_v else 'OFF'}")
-                    elif key == ord('f'):
-                        both = not (self.jedi_flip_h and self.jedi_flip_v)
-                        self.jedi_flip_h = both
-                        self.jedi_flip_v = both
-                        print(f"[*] Jedi full flip (H+V): {'ON' if both else 'OFF'}")
+                        print(f"[*] Vertical invert: {'ON' if self.jedi_flip_v else 'OFF'}")
 
                 await asyncio.sleep(0.015)
 

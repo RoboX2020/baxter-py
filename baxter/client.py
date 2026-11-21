@@ -248,6 +248,12 @@ class Baxter:
         Suppresses collision avoidance during motion.
         """
         target_dict = {}
+        if isinstance(left, str) and left in POSES:
+            pose_name = left
+            left = POSES[pose_name].get("left")
+            if right is None:
+                right = POSES[pose_name].get("right")
+
         if left is not None:
             if isinstance(left, dict):
                 target_dict["left"] = [left[j] for j in JOINTS["left"]]
