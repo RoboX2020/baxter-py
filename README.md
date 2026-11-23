@@ -1,8 +1,39 @@
 # baxter-py
 
+[![Baxter Teaching Labs](https://img.shields.io/badge/Teaching%20Labs-11%20Module%20Curriculum-blue.svg?style=flat-square)](LABS.md)
+[![Hardware](https://img.shields.io/badge/Hardware-Rethink%20Robotics%20Baxter-orange.svg?style=flat-square)](docs/reference/hardware_specifications.md)
+[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-success.svg?style=flat-square)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+
 A modern, standalone Python library and unified Command Line Interface (CLI) for the **Rethink Robotics Baxter** research robot.
 
 `baxter-py` communicates natively via high-speed Rosbridge WebSockets (`ws://<ip>:9090`), removing the need for legacy ROS1 workstation installs, Python 2 environments, or catkin workspaces. It runs seamlessly on modern Python 3.10+ environments (including Ubuntu 24.04 and ARM64 / aarch64 architectures).
+
+---
+
+## 🎓 Baxter Teaching Labs & Engineering Curriculum (0 to Teleop)
+
+Looking to teach or learn robotics with Baxter? Check out our complete **[11-Module Baxter Teaching Labs Curriculum](LABS.md)** with dedicated guides:
+
+| Lab | Module Title & Focus | Guide |
+| :-: | :--- | :-: |
+| **0** | **Physical Architecture & Network Setup**: Unboxing, Link-Local `169.254.X.X`, Rosbridge port 9090 | [Lab 0 Guide](docs/labs/00_prerequisites_and_hardware.md) |
+| **1** | **The E-Stop Lockout & Hardware Fix**: Rear DB15 Port, Optoisolators, Female Pinout Trap, Safety Bypass | [Lab 1 Guide](docs/labs/01_estop_and_safety_hardware_fix.md) |
+| **2** | **Kinematic Limits & Arm Untwisting**: `e0`/`w0` Twist Limits, `e1` Hyperextension, SEA Torques, Zero-G | [Lab 2 Guide](docs/labs/02_kinematics_limits_and_arm_untwisting.md) |
+| **3** | **Robot Initialization & Arm Tucking**: State Machine, Reset/Enable Handshake, Shipping Pose Tuck/Untuck | [Lab 3 Guide](docs/labs/03_robot_initialization_and_state_machine.md) |
+| **4** | **Arm Control & Trajectory Filtering**: 7-DOF Kinematics, Low-Pass Trajectories, Joint Jogging, Poses | [Lab 4 Guide](docs/labs/04_arm_control_and_trajectory_filtering.md) |
+| **5** | **Head Display, Emotions & Gaze**: 1024x600 LCD Screen, Vector Emotions, Custom Banners, Head Pan & Nod | [Lab 5 Guide](docs/labs/05_screen_display_and_head_interaction.md) |
+| **6** | **Multimodal Vision & OpenCV Pipeline**: 3 CMOS Cameras, 2-Cam USB Bandwidth Limit, OpenCV Stream | [Lab 6 Guide](docs/labs/06_vision_and_camera_pipeline.md) |
+| **7** | **AI Gesture Recognition & Interactive Games**: MediaPipe Hand Tracking, Boxing 2.0, Rock-Paper-Scissors | [Lab 7 Guide](docs/labs/07_interactive_ai_gaming_and_hri.md) |
+| **8** | **NVIDIA Isaac Sim Digital Twin**: Real-to-Sim 60Hz Telemetry, Sim-to-Real UDP Sync, Photorealistic RTX | [Lab 8 Guide](docs/labs/08_digital_twin_and_isaac_sim.md) |
+| **9** | **Capstone: 3D Spatial Vision Teleoperation**: Monocular 3D Metric $(X,Y,Z)$, Pinch Clutch, Sim-to-Real Mirror | [Lab 9 Guide](docs/labs/09_capstone_3d_spatial_vision_teleoperation.md) |
+| **10**| **Hardware Diagnostics & Maintenance**: Sensor Tare, Zero-G Rubber Calibration, FTP `/var/log`, Error Codes | [Lab 10 Guide](docs/labs/10_hardware_diagnostics_and_maintenance.md) |
+
+### Archived Technical Reference Guides:
+- 📖 **[Hardware Specifications](docs/reference/hardware_specifications.md)**: Full physical dimensions, torques, electrical power, and degrees of freedom.
+- 📖 **[DB15 Safety & User I/O Pinout](docs/reference/db15_user_io_pinout.md)**: Complete connector pinout, optoisolator specs, and wiring schematics.
+- 📖 **[ROS Topics, Services & Messages](docs/reference/ros_topics_and_messages.md)**: Topic dictionary, service definitions, and message schemas.
+- 📖 **[Kinematics & DH Parameters](docs/reference/kinematics_and_dh_parameters.md)**: Modified Denavit-Hartenberg parameters, transformations, and SEA compliance equations.
 
 ---
 
@@ -271,6 +302,12 @@ asyncio.run(stream_and_detect())
 
 ```text
 baxter-py/
+├── LABS.md              # Flagship 11-Module Baxter Teaching Curriculum
+├── docs/
+│   ├── labs/            # Detailed step-by-step guides for Labs 0 through 10
+│   ├── reference/       # Archived hardware specs, DB15 pinout, ROS topics, kinematics
+│   ├── assets/          # Schematics, hardware diagrams, camera feeds, teleop visualizers
+│   └── screenshots/     # Photorealistic RTX Isaac Sim viewport renders
 ├── baxter/
 │   ├── __init__.py      # Package export and version info
 │   ├── client.py        # Core Baxter connection, WebSocket & parallel UDP broadcast
@@ -283,6 +320,7 @@ baxter-py/
 │   ├── arena.py         # Multi-game interactive arena (RPS, Boxer, Jedi, Bump)
 │   ├── choreography.py  # Symphony and dance choreography routines
 │   ├── sim.py           # NVIDIA Isaac Sim digital twin runner & bridge
+│   ├── track.py         # 3D monocular spatial teleoperator & isometric HUD
 │   └── cli.py           # Command line entry point ('baxter')
 ├── examples/            # Standalone runnable scripts
 ├── models/              # Pretrained gesture model and audio tracks
