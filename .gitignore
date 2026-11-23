@@ -42,5 +42,8 @@ venv.bak/
 # Temporary outputs
 *.jpg
 *.png
+!docs/**/*.jpg
+!docs/**/*.png
+!docs/**/*.gif
 head_camera_sample.jpg
 baxter_*.jpg
