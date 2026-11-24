@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Baxter Teaching Labs</title><meta content="Eleven Baxter teaching modules, from setup and robot state to vision and digital twins." name="description"/><style>*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:#f5f2eb;color:#243137;font:17px/1.7 system-ui,sans-serif}header,main,footer{max-width:1060px;margin:auto;padding:48px 32px}header{padding-top:70px}header small{letter-spacing:.18em;text-transform:uppercase;color:#2c736b}h1{font-size:clamp(38px,6vw,70px);line-height:1.06;letter-spacing:-.04em;margin:24px 0}h2{font-size:30px;line-height:1.25}h3{font-size:23px}h4{font-size:19px}p,li{max-width:78ch}a{color:#176c61;text-underline-offset:3px}nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}nav a{display:flex;gap:18px;border:1px solid #cbd3ce;padding:16px 20px;text-decoration:none;border-radius:8px;background:#fff}nav span{color:#6c7d76;font-variant-numeric:tabular-nums}.notice{padding:24px;border-left:4px solid #b47e2c;background:#eee6d6;margin:30px 0}.notice p:first-child{margin-top:0}.notice p:last-child{margin-bottom:0}section{padding:44px 0;border-top:1px solid #cbd3ce}pre{background:#1c3035;color:#ecf3ee;padding:22px;border-radius:8px;overflow:auto;font:14px/1.65 monospace}code{overflow-wrap:anywhere}pre code{overflow-wrap:normal}img{max-width:100%;height:auto;border-radius:6px}table{display:block;overflow:auto;border-collapse:collapse;font-size:15px}th,td{padding:12px;border:1px solid #ccd3ce;min-width:130px}blockquote{margin:24px 0;padding:5px 20px;border-left:3px solid #739d8f;background:#edf0e8}.back{font-size:14px}footer{border-top:1px solid #cbd3ce;font-size:14px}details{margin-top:24px}summary{cursor:pointer} @media(max-width:650px){header,main,footer{padding:30px 20px}nav{grid-template-columns:1fr}h2{font-size:26px}pre{padding:16px}section{padding:32px 0}}</style></head><body><header><small>baxter-py / teaching edition</small><h1>Baxter<br/>Teaching Labs</h1><p>Eleven modules, from physical architecture and networking to vision, digital twins and teleoperation.</p><div class="notice"><p><strong>Read before working with hardware.</strong> Use a functioning, reviewed emergency-stop system and qualified supervision. Keep people clear of the robot workspace. Stop on faults. Do not bypass a safety interlock.</p><p>This is a web teaching edition of the supplied curriculum, not a safety certification or a tested hardware release. Buttonless E-stop instructions and their repeated troubleshooting shortcuts are omitted. Replacement safety wiring requires review for the exact unit. No original repository source was changed.</p><p>Simulation and physical control are different: sim-to-real modes can move the real robot. Follow the laboratory's approved operating procedure before enabling any motor.</p></div></header><main><h2 id="contents">The learning path</h2><nav><a href="#lab-0"><span>00</span>Prerequisites, Physical Architecture &amp; Network Setup</a><a href="#lab-1"><span>01</span>Emergency-stop readiness</a><a href="#lab-2"><span>02</span>Kinematic Limit Traps, SEA Gravity Faults &amp; Safe Arm Untwisting</a><a href="#lab-3"><span>03</span>Robot Initialization, State Machine &amp; Arm Tucking</a><a href="#lab-4"><span>04</span>Arm Control, Joint Jogging &amp; Trajectory Filtering</a><a href="#lab-5"><span>05</span>Head Screen Display, Facial Emotions &amp; Gaze Control</a><a href="#lab-6"><span>06</span>Multimodal Vision, Embedded Cameras &amp; OpenCV Pipeline</a><a href="#lab-7"><span>07</span>AI Gesture Recognition &amp; Interactive HRI Games</a><a href="#lab-8"><span>08</span>NVIDIA Isaac Sim Digital Twin &amp; Bidirectional Telemetry</a><a href="#lab-9"><span>09</span>Capstone: 3D Spatial Vision Teleoperation &amp; Fingertip Tracking</a><a href="#lab-10"><span>10</span>Hardware Diagnostics, Maintenance &amp; Log Retrieval</a></nav><p>Published from curriculum source at commit <code>0768072</code>. Technical claims and example outputs are supplied course material, not independently verified performance measurements.</p><section id="lab-0"><h2>Lab 0: Prerequisites, Physical Architecture &amp; Network Setup</h2>
+<p><em>Setting up Baxter from zero: mechanical mounting, AC power, link-local networking, and host connectivity.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Understand Baxter's physical safety architecture, component layout, and electrical specifications.
+2. Connect your host workstation to Baxter via physical Ethernet using link-local addressing (<code>169.254.X.X</code>).
+3. Verify network reachability with <code>ping</code> and discover Baxter's onboard Rosbridge WebSocket server (<code>port 9090</code>).
+4. Install and verify the modern Python 3 <code>baxter-py</code> library on your workstation without needing legacy ROS 1 installations or Python 2 environments.</p>
+<hr/>
+<h2>2. Hardware Architecture &amp; Components</h2>
+<p>Baxter consists of the following key subsystems:</p>
+<p><img alt="Baxter Hardware Architecture" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/rsdk_architecture.png"/></p>
+<ol>
+<li><strong>Torso &amp; Pedestal</strong>: Houses the master computer (Intel Core i7 x86), power supplies, motor bus relays, rear power switch, and rear I/O connectors.</li>
+<li><strong>Dual 7-DOF Articulated Limbs</strong>: Driven by Series Elastic Actuators (SEAs) with integrated mechanical springs and joint torque sensing.</li>
+<li><strong>Neck &amp; Head Assembly</strong>: Contains a 1024x600 color LCD display, head pan motor ($\pm 90^\circ$), head nod solenoid, 360° halo LED indicator, and 12-sensor ultrasonic sonar ring.</li>
+<li><strong>End-Effectors &amp; Cuffs</strong>: Two quick-disconnect tool mounting plates, cuff navigators (rotary dial + two buttons), and cuff grip squeeze sensors (Zero-G mode).</li>
+<li><strong>Integrated Cameras</strong>: Three 1.2 megapixel CMOS sensors (Head, Left Wrist, Right Wrist).</li>
+</ol>
+<hr/>
+<h2>3. Power-On Sequence</h2>
+<ol>
+<li><strong>Safety Clearance</strong>: Verify that Baxter's dual arms have at least 1.5 meters of unobstructed clearance in all directions.</li>
+<li><strong>AC Line Power</strong>: Plug the standard IEC 3-prong power cord into a grounded 120V/240V AC wall receptacle.</li>
+<li><strong>Main Power Switch</strong>: Toggle the master rocker switch located at the rear bottom of Baxter's waist to the <strong>ON (I)</strong> position.</li>
+<li><strong>Boot Sequence</strong>:
+   - The cooling fans will spin up to full speed and settle to an idle whisper.
+   - The torso LED halo will illuminate yellow.
+   - The internal x86 computer boots Ubuntu Linux (takes ~60 to 90 seconds).
+   - Once the onboard software boots, the head LCD screen displays Baxter's sleeping or blank face, and the halo turns green or stays yellow (waiting for safety interlock).</li>
+</ol>
+<hr/>
+<h2>4. Workstation Network Configuration</h2>
+<p>Baxter communicates over standard Ethernet using a direct cable or a local Gigabit switch.</p>
+<p><img alt="Network Architecture" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/rsdk_network1.png"/></p>
+<h3>Option A: Direct Peer-to-Peer Link-Local (Recommended)</h3>
+<p>Connect an Ethernet cable directly from your laptop or workstation into the RJ45 port on Baxter's rear waist.</p>
+<ol>
+<li>
+<p><strong>Inspect Your Ethernet Interface Name</strong>:
+   <code>bash
+   ip -br addr
+   # Example output: enx00e04c2e5460 or eth0</code></p>
+</li>
+<li>
+<p><strong>Configure Link-Local (Automatic IPv4)</strong>:
+   Baxter automatically assigns itself an IPv4 link-local address in the <code>169.254.X.X / 16</code> subnet (e.g. <code>169.254.9.243</code>).
+   Configure your workstation's Ethernet interface:
+   <code>bash
+   # Using NetworkManager CLI (nmcli)
+   nmcli con add type ethernet con-name baxter-link ifname &lt;your_interface&gt; ipv4.method link-local
+   nmcli con up baxter-link</code>
+   Or manually assign a static address within the same link-local subnet:
+   <code>bash
+   sudo ip addr add 169.254.254.8/16 dev &lt;your_interface&gt;
+   sudo ip link set &lt;your_interface&gt; up</code></p>
+</li>
+<li>
+<p><strong>Verify Connectivity</strong>:
+   Discover Baxter on the network using <code>arp-scan</code> or <code>avahi-browse</code>:
+   <code>bash
+   # Scan the subnet for Baxter
+   sudo arp-scan --interface=&lt;your_interface&gt; 169.254.0.0/16</code>
+   Ping Baxter (replace with Baxter's IP address or hostname <code>&lt;serial_number&gt;.local</code>):
+   <code>bash
+   ping -c 3 169.254.9.243</code>
+<em>Expected Output:</em>
+<code>text
+   64 bytes from 169.254.9.243: icmp_seq=1 ttl=64 time=0.452 ms
+   64 bytes from 169.254.9.243: icmp_seq=2 ttl=64 time=0.388 ms
+   3 packets transmitted, 3 received, 0% packet loss</code></p>
+</li>
+<li>
+<p><strong>Verify Rosbridge WebSocket Port (9090)</strong>:
+   Baxter runs a Rosbridge WebSocket server that exposes the entire ROS master API over WebSockets:
+   <code>bash
+   nc -zv 169.254.9.243 9090
+   # Output: Connection to 169.254.9.243 9090 port [tcp/*] succeeded!</code></p>
+</li>
+</ol>
+<hr/>
+<h2>5. Installing <code>baxter-py</code> on Modern Linux (Python 3.10+)</h2>
+<p>Historically, using Baxter required Ubuntu 14.04 (Trusty), ROS Indigo, and Python 2.7. 
+With <code>baxter-py</code>, you can run on modern Ubuntu 22.04 / 24.04 with Python 3.10+, or any Linux workstation.</p>
+<ol>
+<li>
+<p><strong>Clone the Repository</strong>:
+   <code>bash
+   git clone https://github.com/RoboX2020/baxter-py.git
+   cd baxter-py</code></p>
+</li>
+<li>
+<p><strong>Install in Editable Mode</strong>:
+   <code>bash
+   pip install -e ".[vision]"</code></p>
+</li>
+<li>
+<p><strong>Test CLI Installation</strong>:
+   <code>bash
+   baxter --help</code></p>
+</li>
+<li>
+<p><strong>Query System Status</strong>:
+   <code>bash
+   baxter status</code></p>
+</li>
+</ol>
+<p>If your terminal displays the robot status dictionary, your network connection and client library are successfully configured! In <strong>Lab 1</strong>, we will resolve the safety interlock and E-stop hardware lockout.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-1"><h2>Lab 1: Emergency-stop readiness</h2>
+<p>This published teaching edition omits the buttonless emergency-stop bypass procedure. A discontinued pendant is not a reason to operate without a functioning emergency-stop system.</p>
+<p>Before powered work, have a qualified robot-safety/electrical reviewer verify a suitable replacement safety system against the exact robot hardware revision and applicable manufacturer documentation. Keep a working emergency-stop control accessible to the operator and verify its function under the laboratory safety procedure.</p>
+<p>The replacement-button wiring in the original source has not been independently validated for this edition, so no wiring instructions are supplied here. Do not infer safety from an enabled-state reading.</p>
+<h2>Diagnostic note</h2>
+<p>The manufacturer's <code>AssemblyState</code> definition identifies <code>estop_source = 4</code> as a lapse of the brain heartbeat, not proof of an external-interlock wiring fault. Diagnose the actual unit using its matching documentation and a qualified reviewer.</p>
+<p><a href="https://github.com/RethinkRobotics/baxter_common/blob/master/baxter_core_msgs/msg/AssemblyState.msg">Manufacturer state definitions</a></p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-2"><h2>Lab 2: Kinematic Limit Traps, SEA Gravity Faults &amp; Safe Arm Untwisting</h2>
+<p><em>Resolving joint limit lockouts, elbow hyperextension, Series Elastic Actuator (SEA) torque faults, and manual arm untwisting.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Understand why Baxter reports <code>error: True</code> and refuses to enable even after clearing the physical E-stop.
+2. Identify the mechanical hard stops on Baxter's twist joints (<code>e0</code> and <code>w0</code>) and elbow hinge (<code>e1</code>).
+3. Understand how Series Elastic Actuators (SEAs) detect gravity-induced joint torques while unpowered.
+4. Manually untwist and reposition Baxter's limbs into the safe kinematic zone using cuff buttons and manual positioning.
+5. Use live telemetry scripts to monitor joint angles in real time and verify that all limit faults have cleared.</p>
+<hr/>
+<h2>2. The Symptom: E-Stop is Cleared, But Robot Still Refuses to Enable</h2>
+<p>With a reviewed, functioning emergency-stop system in place, a robot can still report a joint-limit fault:</p>
+<pre><code class="language-bash">$ baxter status
+Robot Status:
+  enabled: False
+  stopped: False       &lt;-- E-stop is clear
+  error: True          &lt;-- But error is still True!
+  estop_button: 0
+  estop_source: 0
+</code></pre>
+<p>When you run <code>baxter enable</code>, Baxter attempts to reset, but the motor relays fail to click ON, or click ON for half a second and immediately shut off with:</p>
+<pre><code class="language-text">WARN (/realtime_loop,RobotStatePublisher.cpp:179) GlobalEnable requested, robot is still resetting
+ERROR (/realtime_loop,Joint.cpp:337) Joint right_e0 tripped mechanical joint limit watchdog!
+</code></pre>
+<hr/>
+<h2>3. The Mechanics of the Twist Joints (<code>e0</code> &amp; <code>w0</code>)</h2>
+<p>Each Baxter arm has 7 degrees of freedom:</p>
+<p><img alt="Joint Description" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/joint_description.png"/></p>
+<p>Unlike humans, who have continuous range of motion through ball joints, Baxter's arms alternate between <strong>Pitch joints (hinges)</strong> and <strong>Roll joints (rotary twists)</strong>:
+- <strong><code>s0</code></strong>: Shoulder Yaw / Pan
+- <strong><code>s1</code></strong>: Shoulder Pitch (Arm up / down)
+- <strong><code>e0</code></strong>: <strong>Elbow Roll / Upper Arm Twist</strong> (Rotation along bicep axis, like turning a screwdriver)
+- <strong><code>e1</code></strong>: <strong>Elbow Pitch</strong> (Bends forearm toward upper arm)
+- <strong><code>w0</code></strong>: <strong>Wrist Roll / Forearm Twist</strong> (Rotation of forearm around its long axis)
+- <strong><code>w1</code></strong>: Wrist Pitch (Wrist flex up / down)
+- <strong><code>w2</code></strong>: Wrist Roll (End-effector plate rotation)</p>
+<h3>The Mechanical Limit Trap:</h3>
+<p>Joints <strong><code>e0</code></strong> and <strong><code>w0</code></strong> have a software limit of <code>[-3.054, +3.054]</code> radians ($\pm 175.0^\circ$).
+Just beyond $175^\circ$ lies a <strong>solid internal mechanical hard stop</strong>.</p>
+<p>When Baxter is moved, stored, or manually jostled while powered OFF, the forearm or upper arm is frequently twisted all the way around until it jams firmly against the $-174^\circ$ or $+174^\circ$ hard stop.
+When Baxter boots, its internal position encoders read:</p>
+<pre><code class="language-text">right_e0: -3.037 rad (-174.0°)  [LIMIT TRIPPED]
+right_w0: -3.059 rad (-175.3°)  [LIMIT TRIPPED]
+right_e1: -0.062 rad (  -3.6°)  [HYPEREXTENDED]
+</code></pre>
+<p>Because the joints are jammed against their limits, Baxter's internal safety watchdog considers the robot in imminent danger of mechanical damage and <strong>refuses to energize the motor bus relays</strong>.</p>
+<hr/>
+<h2>4. Series Elastic Actuators (SEA) &amp; Gravity Torques</h2>
+<p>In addition to joint limits, Baxter uses <strong>Series Elastic Actuators</strong> (SEAs). Inside every joint, a planar spring measures the torque between the motor and the limb.</p>
+<ul>
+<li>If Baxter's arms are resting completely outstretched horizontally like planks, the cantilevered weight of the arm exerts up to $30\text{ N}\cdot\text{m}$ of pure gravity torque on the unpowered springs.</li>
+<li>If the arm is hyperextended backwards (<code>right_e1</code> at $-3.6^\circ$), the elbow joint cannot rotate forward under motor power without severe resistance.</li>
+</ul>
+<hr/>
+<h2>5. The Physical Untwisting Procedure (Takes 10 Seconds)</h2>
+<p>To clear the error flags and allow the motors to enable, follow these manual steps:</p>
+<pre><code class="language-text">               +----------------------------------------+
+               |  STEP 1: BEND THE ELBOW (e1)           |
+               |  Gently flex elbow forward to ~45°-90° |
+               +-------------------+--------------------+
+                                   │
+                                   ▼
+               +----------------------------------------+
+               |  STEP 2: UNTWIST THE FOREARM (w0)      |
+               |  Rotate cuff so buttons face UPWARD    |
+               +-------------------+--------------------+
+                                   │
+                                   ▼
+               +----------------------------------------+
+               |  STEP 3: UNTWIST THE UPPER ARM (e0)    |
+               |  Rotate bicep into neutral center      |
+               +-------------------+--------------------+
+                                   │
+                                   ▼
+               +----------------------------------------+
+               |  STEP 4: LIFT SLIGHTLY &amp; RUN RESET     |
+               |  Stop and seek qualified assistance    |
+               |  before powered recovery              |
+               +----------------------------------------+
+</code></pre>
+<h3>Step 1: Bend the Elbow (<code>e1</code>) Forward</h3>
+<p>Look at both arms. If an arm is locked completely straight or bent backwards:
+- Grab the forearm and bend the elbow forward into a relaxed L-shape ($45^\circ$ to $90^\circ$ angle).
+- This takes <code>e1</code> from $-3.6^\circ$ up to $+45^\circ \dots +90^\circ$, cleanly clearing the hyperextension limit.</p>
+<h3>Step 2: Untwist the Forearm (<code>w0</code>)</h3>
+<ul>
+<li>Look at the end-effector cuff: the circular button and navigator dial should be facing naturally <strong>UPWARD or FORWARD</strong>, not twisted upside down or backwards against the stop.</li>
+<li>Rotate the forearm about a quarter to half turn until the joint angle moves from $-174^\circ$ toward $0^\circ \dots +90^\circ$.</li>
+</ul>
+<h3>Step 3: Untwist the Upper Arm (<code>e0</code>)</h3>
+<ul>
+<li>Rotate the bicep / elbow joint so that the elbow hinge is pointing outward/backward naturally.</li>
+</ul>
+<blockquote>
+<p>[!TIP]
+<strong>Using the Zero-G Cuff Squeeze Sensor</strong>:
+On each wrist cuff, there is a soft rubber squeeze ring. When Baxter's 12V logic power is ON, squeezing this rubber ring engages <strong>Zero-Gravity Mode</strong>, opening the motor brakes and allowing smooth, effortless manual positioning!</p>
+</blockquote>
+<hr/>
+<h2>6. Live Joint Angle &amp; Safety Monitoring Script</h2>
+<p>To observe the joint angles in real time while you untwist the arms, use this standalone monitoring utility:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Live Joint Twist &amp; Safety Monitor for Baxter."""
+import asyncio
+from baxter import Baxter
+
+async def monitor():
+    async with Baxter() as robot:
+        print("\n=== BAXTER ARM TWIST &amp; SAFETY MONITOR ===")
+        print("Watching right_e0, right_w0, right_e1. Rotate joints into safe range:\n")
+
+        while True:
+            state = await robot.get_state()
+            joints = await robot.get_joint_positions()
+
+            e0 = joints.get("right_e0", 0.0) * 180.0 / 3.14159
+            w0 = joints.get("right_w0", 0.0) * 180.0 / 3.14159
+            e1 = joints.get("right_e1", 0.0) * 180.0 / 3.14159
+
+            e0_ok = -160.0 &lt; e0 &lt; 160.0
+            w0_ok = -160.0 &lt; w0 &lt; 160.0
+            e1_ok = e1 &gt; 10.0
+
+            st_e0 = "OK" if e0_ok else "JAMMED NEAR STOP"
+            st_w0 = "OK" if w0_ok else "JAMMED NEAR STOP"
+            st_e1 = "OK" if e1_ok else "HYPEREXTENDED"
+
+            print(f"\r[STATUS] e0: {e0:6.1f}° ({st_e0:16}) | w0: {w0:6.1f}° ({st_w0:16}) | e1: {e1:5.1f}° ({st_e1:13}) | Error: {state.get('error')}", end="")
+
+            # Monitor only. Do not automatically energize a robot during manual handling.
+            await asyncio.sleep(0.5)
+
+if __name__ == "__main__":
+    asyncio.run(monitor())
+</code></pre>
+<h3>The Telltale Sign of Success:</h3>
+<p>When <code>e0</code>, <code>w0</code>, and <code>e1</code> are safely positioned, running <code>baxter enable</code>:
+1. You will hear a loud, satisfying <strong>mechanical click (THUNK)</strong> from the 48V contactor relays inside the lower torso.
+2. The arm joints will instantly stiffen and resist external motion as the servo loops close.
+3. Baxter's halo ring will transition to solid bright green.</p>
+<p>In <strong>Lab 3</strong>, we will dive into the state machine, reset/enable pulse handshakes, and tucking/untucking operations.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-3"><h2>Lab 3: Robot Initialization, State Machine &amp; Arm Tucking</h2>
+<p><em>Mastering Baxter's internal state machine, reset/enable pulse handshakes, and shipping pose tucking/untucking.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Deconstruct Baxter's internal state machine and lifecycle transitions (<code>DISABLED</code>, <code>RESETTING</code>, <code>ENABLED</code>, <code>STOPPED</code>).
+2. Understand the exact topic handshake required to clear latching faults (<code>/robot/set_super_reset</code> $\rightarrow$ <code>/robot/set_super_enable</code>).
+3. Power on and power down arm motor amplifiers via both the terminal CLI and Python async scripts.
+4. Execute the automated arm tucking and untucking routines (<code>baxter tuck</code> and <code>baxter untuck</code>).
+5. Understand the collision avoidance suppression mechanism required during tight-space maneuvers.</p>
+<hr/>
+<h2>2. Baxter's State Machine Architecture</h2>
+<p>Baxter's top-level power controller runs an embedded state machine that coordinates 48V motor power relays, watchdog heartbeats, Series Elastic Actuator amplifiers, and collision models:</p>
+<pre><code class="language-mermaid">stateDiagram-v2
+    [*] --&gt; Disabled: System Boot / AC Power On
+    Disabled --&gt; Resetting: /robot/set_super_reset pulse
+    Resetting --&gt; Disabled: Faults Cleared
+    Disabled --&gt; Enabled: /robot/set_super_enable (True)
+    Enabled --&gt; Disabled: /robot/set_super_enable (False)
+    Enabled --&gt; Stopped: Hardware E-Stop / Software Stop
+    Disabled --&gt; Stopped: E-Stop Tripped
+    Stopped --&gt; Resetting: Release E-Stop + set_super_reset
+</code></pre>
+<h3>State Flags in <code>baxter_core_msgs/AssemblyState</code>:</h3>
+<ul>
+<li><strong><code>enabled: False</code>, <code>stopped: False</code>, <code>error: False</code></strong>: Robot is in standby logic mode. Relay open; arm motors unpowered. Ready to enable.</li>
+<li><strong><code>enabled: True</code>, <code>stopped: False</code>, <code>error: False</code></strong>: 48V relays closed; motor servo loops active at 1000 Hz. Robot is fully operational.</li>
+<li><strong><code>stopped: True</code></strong>: Emergency stop asserted (hardware switch or software stop). Motors cut immediately.</li>
+<li><strong><code>error: True</code></strong>: A hardware fault, joint limit violation, or amplifier overcurrent has occurred. Must be reset before enabling.</li>
+</ul>
+<hr/>
+<h2>3. The Pulse Handshake: Why <code>enable</code> Alone Can Fail</h2>
+<p>If a joint has tripped a limit or an E-stop button was pressed and released, Baxter enters a <strong>latched fault state</strong> (<code>error: True</code>, <code>estop_button: 3</code>).</p>
+<p>In this condition, simply commanding <code>enable(True)</code> is rejected by the controller:</p>
+<pre><code class="language-text">WARN (/realtime_loop,RobotStatePublisher.cpp:179) GlobalEnable requested, robot is still resetting
+</code></pre>
+<h3>The Required 3-Step Handshake:</h3>
+<p>To guarantee that the motor relays latch, you must execute the canonical reset sequence:</p>
+<ol>
+<li><strong>Assert Global Disable</strong>:
+   Publish <code>data: False</code> to <code>/robot/set_super_enable</code> (<code>std_msgs/Bool</code>).
+   <em>Wait 100 ms for motor controllers to de-energize.</em></li>
+<li><strong>Pulse Global Reset</strong>:
+   Publish an empty message to <code>/robot/set_super_reset</code> (<code>std_msgs/Empty</code>).
+   <em>Wait 300–500 ms for joint amplifiers to run power-on self tests (POST) and clear fault registers.</em></li>
+<li><strong>Assert Global Enable</strong>:
+   Publish <code>data: True</code> to <code>/robot/set_super_enable</code> (<code>std_msgs/Bool</code>) at 10 Hz until <code>enabled == True</code> is confirmed on <code>/robot/state</code>.</li>
+</ol>
+<p><code>baxter-py</code> automates this entire handshake internally when you run <code>baxter enable</code> or call <code>await robot.enable()</code>.</p>
+<hr/>
+<h2>4. State &amp; Power Management CLI</h2>
+<p>Open your terminal and experiment with Baxter's power system:</p>
+<pre><code class="language-bash"># 1. Inspect current state and joint angles
+baxter status
+
+# 2. Reset any latching errors
+baxter reset
+
+# 3. Energize the 48V motor relays
+baxter enable
+
+# 4. De-energize the 48V motor relays (arms safely lower)
+baxter disable
+</code></pre>
+<hr/>
+<blockquote>
+<p>Manufacturer constraint: no other control programs may be running during the standard tuck/untuck routine. This teaching copy describes the supported shipping-pose mechanism, not permission to suppress protection during unrelated operation. <a href="https://github.com/RethinkRobotics/sdk-docs/wiki/Tuck-Arms-Example">Rethink Tuck Arms Example</a>.</p>
+</blockquote>
+<h2>5. Tucking and Untucking Baxter's Arms</h2>
+<p>When Baxter is shipped or packed away, its arms are folded tightly into its chest in the <strong>"Shipping Pose" (Tucked)</strong>. </p>
+<p><img alt="Tuck Untuck Overview" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/tuck_untuck.png"/></p>
+<h3>The Collision Avoidance Paradox:</h3>
+<p>In normal operation, Baxter runs an internal geometric collision model that actively stops the arms from colliding with each other or the torso.
+However, in the <strong>Shipping Pose</strong>, the arms are folded within millimeters of the torso. If collision avoidance remained active, the robot would lock up and refuse to move out of the tucked pose!</p>
+<h3>How <code>baxter-py</code> Solves This:</h3>
+<p>During <code>baxter untuck</code> and <code>baxter tuck</code>, the controller temporarily publishes heartbeat pulses to:
+- <code>/robot/limb/left/suppress_collision_avoidance</code>
+- <code>/robot/limb/right/suppress_collision_avoidance</code></p>
+<p>This allows the trajectory generator to unfold the arms safely along a deterministic trajectory without triggering collision halts.</p>
+<hr/>
+<h2>6. Hands-On Exercise: Transitioning from Tucked to Neutral</h2>
+<h3>Step 1: Untuck Arms into Operational Stance</h3>
+<p>With Baxter enabled, run:</p>
+<pre><code class="language-bash">baxter untuck
+</code></pre>
+<p><em>Observe Baxter's motion</em>:
+1. The arms will smoothly unfold from the chest.
+2. The elbows swing outward to clear the torso.
+3. The arms settle into a symmetrical, forward-facing neutral stance ready for research tasks:
+   - <code>s0: 0.0 rad (0°)</code>
+   - <code>s1: -0.55 rad (-31.5°)</code>
+   - <code>e0: 0.0 rad (0°)</code>
+   - <code>e1: 1.25 rad (+71.6°)</code>
+   - <code>w0: 0.0 rad (0°)</code>
+   - <code>w1: 0.85 rad (+48.7°)</code>
+   - <code>w2: 0.0 rad (0°)</code></p>
+<h3>Step 2: Tuck Arms for End-of-Day Storage</h3>
+<p>When laboratory experiments are complete:</p>
+<pre><code class="language-bash">baxter tuck
+</code></pre>
+<p>The arms will execute the inverse sequence, gently folding back into the torso before disabling the motor relays.</p>
+<hr/>
+<h2>7. Python Automation Script</h2>
+<p>Here is an end-to-end Python script performing system health verification, enabling, untucking, and reporting status:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Lab 3: Python State Management and Untuck Exercise."""
+import asyncio
+from baxter import Baxter
+
+async def main():
+    async with Baxter() as robot:
+        # Step 1: Query initial state
+        state = await robot.get_state()
+        print(f"Initial Robot State: enabled={state.get('enabled')}, stopped={state.get('stopped')}, error={state.get('error')}")
+
+        # Step 2: Ensure robot is enabled
+        if not state.get("enabled"):
+            print("Energizing 48V motor relays...")
+            await robot.enable()
+            print("Motors successfully enabled!")
+
+        # Step 3: Untuck arms into operational stance
+        print("Executing smooth untuck routine...")
+        await robot.untuck(duration=3.5)
+        print("Arms are in operational neutral posture!")
+
+        # Step 4: Display joint angles
+        joints = await robot.get_joint_positions()
+        print("\nLeft Arm Angles:")
+        for j in ["left_s0", "left_s1", "left_e0", "left_e1", "left_w0", "left_w1", "left_w2"]:
+            print(f"  {j}: {joints.get(j, 0.0):.3f} rad")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</code></pre>
+<p>In <strong>Lab 4</strong>, we will begin commanding individual joints, learning forward kinematics, and filtering trajectories to eliminate SEA spring vibrations.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-4"><h2>Lab 4: Arm Control, Joint Jogging &amp; Trajectory Filtering</h2>
+<p><em>Controlling 7-DOF limbs, low-pass trajectory interpolation, dampening SEA oscillations, and jogging joints.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Master joint-level control of Baxter's 7-DOF articulating arms.
+2. Understand why step commands cause mechanical resonance in Series Elastic Actuators (SEAs).
+3. Implement a continuous first-order low-pass filter and quintic polynomial trajectory generator.
+4. Jog individual joints using the <code>baxter jog</code> CLI tool.
+5. Program custom multi-joint poses and choreographies (<code>wave</code>, <code>cheer</code>, <code>salute</code>) using the Python API.</p>
+<hr/>
+<h2>2. Series Elastic Actuators (SEA) &amp; The Resonance Trap</h2>
+<p>Traditional industrial robotic arms (like KUKA or FANUC) have rigid harmonic drives and stiff steel shafts. You can command them with instantaneous step inputs, and the arm will snap to position aggressively.</p>
+<p>Baxter is fundamentally different: <strong>every joint has a calibrated torsional spring between the motor and the limb</strong>.</p>
+<pre><code class="language-text">  [Motor + Gearbox] ─── (Torsion Spring: Ks) ─── [Output Link / Arm]
+</code></pre>
+<h3>The Spring Resonance Phenomenon:</h3>
+<p>If you publish a sudden step change in target position:
+1. The motor accelerates rapidly, winding up the torsion spring.
+2. The spring releases stored energy, overshooting the target.
+3. The limb violently oscillates back and forth at the mechanical natural frequency ($\approx 2 \dots 5\text{ Hz}$), causing Baxter to shudder and trip an amplifier torque safety error!</p>
+<h3>The Mathematical Solution: Trajectory Filtering</h3>
+<p>All commanded trajectories must be smoothly interpolated. <code>baxter-py</code> employs a digital first-order low-pass filter and minimum-jerk (quintic polynomial) interpolation:</p>
+<p>$$q_k = q_{k-1} + \alpha \cdot (q_{\text{target}} - q_{k-1})$$</p>
+<p>Where $\alpha \in (0, 1]$ is the smoothing factor calibrated to Baxter's internal SEA time constants ($\tau \approx 0.1\text{ s}$).</p>
+<hr/>
+<h2>3. Joint Jogging via the CLI</h2>
+<p>You can jog individual joints by specified angle offsets (in degrees) directly from your terminal:</p>
+<pre><code class="language-bash"># Syntax: baxter jog &lt;arm: left|right&gt; &lt;joint_name&gt; &lt;delta_deg&gt;
+
+# Rotate Right Shoulder Pan outward by 10 degrees
+baxter jog right s0 10.0
+
+# Rotate Right Shoulder Pan inward by 10 degrees
+baxter jog right s0 -10.0
+
+# Flex Left Elbow forward by 15 degrees
+baxter jog left e1 15.0
+
+# Rotate Right Forearm (Wrist Roll w0) by 20 degrees
+baxter jog right w0 20.0
+</code></pre>
+<p><em>Joint Names</em>: <code>s0</code> (Shoulder Pan), <code>s1</code> (Shoulder Pitch), <code>e0</code> (Elbow Roll), <code>e1</code> (Elbow Pitch), <code>w0</code> (Wrist Roll), <code>w1</code> (Wrist Pitch), <code>w2</code> (Wrist Roll 2).</p>
+<hr/>
+<h2>4. Built-In Choreography Routines</h2>
+<p><code>baxter-py</code> includes calibrated multi-joint posture presets:</p>
+<pre><code class="language-bash"># Friendly welcoming wave gesture
+baxter move wave
+
+# Dual-arm celebratory victory cheer
+baxter move cheer
+
+# Military-style smart salute
+baxter move salute
+
+# Forward reaching grasping stance
+baxter move reach
+
+# Return to symmetrical operational neutral
+baxter move neutral
+</code></pre>
+<hr/>
+<h2>5. Python API: Multi-Joint Trajectory Interpolation</h2>
+<p>Here is how to create a custom smooth multi-waypoint motion generator using <code>baxter-py</code>:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Lab 4: Custom Smooth Arm Motion Generator."""
+import asyncio
+import math
+from baxter import Baxter
+
+async def move_to_pose(robot, arm_name, target_joints, duration=2.5, steps=50):
+    """Interpolates joints smoothly using minimum-jerk cosine ramping."""
+    current_joints = await robot.get_joint_positions()
+    arm_joints = [j for j in current_joints if j.startswith(arm_name)]
+
+    start_angles = {j: current_joints[j] for j in arm_joints}
+    dt = duration / steps
+
+    for i in range(steps + 1):
+        # Cosine s-curve profile (0.0 to 1.0)
+        t = i / steps
+        alpha = 0.5 * (1.0 - math.cos(math.pi * t))
+
+        step_command = {}
+        for j, target_val in target_joints.items():
+            start_val = start_angles.get(j, 0.0)
+            step_command[j] = start_val + alpha * (target_val - start_val)
+
+        await robot.send_joint_command(arm_name, step_command)
+        await asyncio.sleep(dt)
+
+async def main():
+    async with Baxter() as robot:
+        state = await robot.get_state()
+        if not state.get("enabled"):
+            await robot.enable()
+
+        print("Executing custom waving choreography...")
+
+        # High wave pose
+        wave_high = {
+            "right_s0": -0.20,
+            "right_s1": -0.80,
+            "right_e0": 1.20,
+            "right_e1": 1.70,
+            "right_w0": 0.0,
+            "right_w1": -0.60,
+            "right_w2": 0.0,
+        }
+
+        # Wave left pose
+        wave_tilt = {
+            "right_s0": -0.20,
+            "right_s1": -0.80,
+            "right_e0": 1.20,
+            "right_e1": 1.70,
+            "right_w0": 0.0,
+            "right_w1": 0.20,
+            "right_w2": 0.0,
+        }
+
+        await move_to_pose(robot, "right", wave_high, duration=2.0)
+
+        # Oscillate wrist for 3 cycles
+        for _ in range(3):
+            await move_to_pose(robot, "right", wave_tilt, duration=0.6)
+            await move_to_pose(robot, "right", wave_high, duration=0.6)
+
+        # Return to neutral
+        await robot.untuck(duration=2.5)
+        print("Motion complete!")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</code></pre>
+<p>In <strong>Lab 5</strong>, we will turn our attention to Baxter's head: rendering emotional facial expressions on the 1024x600 screen and actuating head pan and nod.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-5"><h2>Lab 5: Head Screen Display, Facial Emotions &amp; Gaze Control</h2>
+<p><em>Rendering 1024x600 vector graphics on Baxter's LCD face screen, programming social emotional expressions, and actuating head pan/nod.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Understand Baxter's 1024x600 LCD screen graphics pipeline via the <code>/robot/xdisplay</code> topic.
+2. Render vector facial expressions using Python's Pillow (PIL) library without X11 desktop forwarding.
+3. Switch between built-in emotional facial expressions (<code>happy</code>, <code>focused</code>, <code>wink</code>, <code>boxing</code>, <code>disco</code>, <code>sleepy</code>, <code>surprised</code>).
+4. Overlay custom status banners and display arbitrary PNG/JPEG images on Baxter's face.
+5. Actuate the head pan motor ($\pm 90^\circ$) and trigger the affirmative head nod mechanism.</p>
+<hr/>
+<h2>2. The Head Screen Architecture</h2>
+<p>Baxter features a <strong>1024 x 600 pixel color LCD monitor</strong> mounted directly inside its head assembly.</p>
+<p><img alt="Screen Face Emotion" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/screen_emotion.png"/></p>
+<h3>The Graphics Pipeline:</h3>
+<ul>
+<li>The onboard screen is controlled by Baxter's internal display driver listening on the topic:
+  <code>text
+  /robot/xdisplay (sensor_msgs/Image)</code></li>
+<li>Any standard raw image formatted as <strong>RGB8 / BGR8</strong> with dimensions <strong>1024x600</strong> published to this topic is immediately rasterized onto Baxter's screen at up to 30 Hz.</li>
+<li><code>baxter-py</code> contains an integrated vector rendering engine that mathematically draws animated cartoon eyes, eyebrows, pupils, and mouth lines directly into memory, then compresses and streams the frame over WebSockets.</li>
+</ul>
+<hr/>
+<h2>3. Changing Facial Expressions via CLI</h2>
+<p><code>baxter-py</code> provides high-level commands to control Baxter's social persona:</p>
+<pre><code class="language-bash"># Happy smiling face
+baxter face happy
+
+# Focused / thinking face (eyebrows furrowed)
+baxter face focused
+
+# Playful winking face
+baxter face wink
+
+# Boxing / sparring game face (sports headband)
+baxter face boxing
+
+# Disco / sunglasses party face
+baxter face disco
+
+# Surprised / alert face (wide circular eyes)
+baxter face surprised
+
+# Sleepy / resting face (drooping eyelids)
+baxter face sleepy
+</code></pre>
+<h3>Adding Custom Banner Text:</h3>
+<p>You can display status messages, team names, or telemetry across the top and bottom of Baxter's face:</p>
+<pre><code class="language-bash">baxter face happy --text "ROBOTICS LAB 101 - ACTIVE"
+baxter face focused --text "RUNNING VISION SERVOING..."
+</code></pre>
+<h3>Displaying Custom Images from Disk:</h3>
+<p>To display university logos, diagrams, or camera feeds:</p>
+<pre><code class="language-bash">baxter face --image ./path/to/my_image.png
+</code></pre>
+<p><em>(Images are automatically scaled and letterboxed to 1024x600 without distortion).</em></p>
+<hr/>
+<h2>4. Head Pan &amp; Affirmative Nodding</h2>
+<p>Baxter's head assembly contains two distinct actuators:
+1. <strong>Head Pan Motor</strong>: A direct rotary actuator providing $\pm 90^\circ$ ($\pm 1.571\text{ rad}$) of yaw rotation.
+2. <strong>Head Nod Mechanism</strong>: A rapid solenoid/cam pulse that nods the screen up and down to indicate confirmation or understanding.</p>
+<pre><code class="language-bash"># Pan head 30 degrees to the right
+baxter head pan -30.0 --deg
+
+# Pan head 45 degrees to the left
+baxter head pan 45.0 --deg
+
+# Center head forward (0 degrees)
+baxter head pan 0.0 --deg
+
+# Trigger an affirmative nod
+baxter head nod
+</code></pre>
+<hr/>
+<h2>5. Python API: Interactive Gaze &amp; Social Response</h2>
+<p>Here is a Python script that coordinates facial expressions, head panning, and nodding into an interactive social greeting routine:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Lab 5: Interactive Social Head &amp; Display Exercise."""
+import asyncio
+from baxter import Baxter
+
+async def main():
+    async with Baxter() as robot:
+        state = await robot.get_state()
+        if not state.get("enabled"):
+            await robot.enable()
+
+        print("1. Displaying welcoming smile...")
+        await robot.display.show_emotion("happy", status_text="WELCOME TO THE LAB!")
+        await asyncio.sleep(1.5)
+
+        print("2. Looking left toward workstation...")
+        await robot.head.pan(math_deg=45.0)
+        await asyncio.sleep(1.0)
+
+        print("3. Nodding in agreement...")
+        await robot.head.nod()
+        await robot.display.show_emotion("wink", status_text="I SEE YOU!")
+        await asyncio.sleep(1.5)
+
+        print("4. Looking right toward test arena...")
+        await robot.head.pan(math_deg=-45.0)
+        await robot.display.show_emotion("focused", status_text="ANALYZING TARGET...")
+        await asyncio.sleep(1.5)
+
+        print("5. Centering head and resetting to neutral...")
+        await robot.head.pan(math_deg=0.0)
+        await robot.display.show_emotion("neutral", status_text="READY")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+</code></pre>
+<p>In <strong>Lab 6</strong>, we will tap into Baxter's optical sensors: streaming and processing video from the head and hand cameras.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-6"><h2>Lab 6: Multimodal Vision, Embedded Cameras &amp; OpenCV Pipeline</h2>
+<p><em>Accessing Baxter's 3 onboard cameras, managing USB bus bandwidth constraints, and streaming frames into OpenCV.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Understand the physical placement and optical characteristics of Baxter's three cameras.
+2. Master Baxter's USB bus bandwidth limitation (<strong>maximum two cameras simultaneously</strong>).
+3. Switch camera streams dynamically between head and hand cameras.
+4. Capture high-resolution snapshots to disk using the CLI.
+5. Build an OpenCV computer vision pipeline for real-time edge detection and color thresholding.</p>
+<hr/>
+<h2>2. Camera Hardware &amp; Topology</h2>
+<p>Baxter is equipped with three Omnivision 1.2 Megapixel CMOS cameras:</p>
+<p><img alt="Head Camera Feed" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/head_camera_feed.jpg"/></p>
+<ol>
+<li><strong><code>head_camera</code></strong>: Located above the LCD screen on the head assembly. Offers an expansive birds-eye view of the workspace and approaching humans.</li>
+<li><strong><code>left_hand_camera</code></strong>: Integrated into the left tool cuff, pointing coaxially with the gripper mount.</li>
+<li><strong><code>right_hand_camera</code></strong>: Integrated into the right tool cuff, pointing coaxially with the gripper mount.</li>
+</ol>
+<hr/>
+<h2>3. The 2-Camera USB Bandwidth Constraint</h2>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>HARDWARE CONSTRAINT: MAXIMUM TWO CAMERAS CONCURRENTLY!</strong>
+All three cameras connect back to the internal x86 torso computer over internal USB 2.0 root hubs. Due to USB 2.0 isochronous bandwidth limitations, Baxter's hardware <strong>only supports streaming from TWO cameras at any given moment</strong>.</p>
+</blockquote>
+<h3>Default Boot Behavior:</h3>
+<p>Upon bootup, Baxter automatically opens:
+1. <code>left_hand_camera</code> (320x200 @ 25 fps)
+2. <code>right_hand_camera</code> (320x200 @ 25 fps)</p>
+<p>If you attempt to open <code>head_camera</code> without first closing one of the hand cameras, the driver will reject the request with a bandwidth saturation error.
+<code>baxter-py</code> handles this automatically: when you request <code>head_camera</code>, it gracefully suspends an idle wrist camera, opens the head camera, and restores the wrist camera when done.</p>
+<hr/>
+<h2>4. Camera Resolution Modes</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Mode</th>
+<th style="text-align: center;">Resolution (W x H)</th>
+<th style="text-align: center;">Aspect Ratio</th>
+<th style="text-align: left;">Primary Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>0</strong></td>
+<td style="text-align: center;"><strong>1280 x 800</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">Maximum detail; static inspection, AprilTags, OCR</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>1</strong></td>
+<td style="text-align: center;"><strong>960 x 600</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">High-quality visual tracking</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>2</strong></td>
+<td style="text-align: center;"><strong>640 x 400</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">Standard computer vision &amp; deep learning models</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>3</strong></td>
+<td style="text-align: center;"><strong>480 x 300</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">Balanced speed / resolution</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>4</strong></td>
+<td style="text-align: center;"><strong>384 x 240</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">High-framerate visual servoing</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>5</strong></td>
+<td style="text-align: center;"><strong>320 x 200</strong></td>
+<td style="text-align: center;">16:10</td>
+<td style="text-align: left;">Low bandwidth dual streaming</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2>5. Camera CLI Commands</h2>
+<p>Capture images and inspect streams directly from your terminal:</p>
+<pre><code class="language-bash"># Capture a snapshot from the head camera to disk
+baxter camera snapshot -o head_cam.jpg
+
+# Capture a snapshot from the right hand wrist camera
+baxter camera snapshot --camera right_hand_camera -o wrist_cam.jpg
+
+# Open a live OpenCV GUI preview window from the head camera
+baxter camera view
+</code></pre>
+<hr/>
+<h2>6. Python OpenCV Computer Vision Pipeline</h2>
+<p>Here is a complete, runnable Python script that subscribes to the head camera stream, decodes frames into NumPy arrays, and runs real-time edge detection:</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Lab 6: OpenCV Real-Time Vision Processing on Baxter Camera."""
+import asyncio
+import cv2
+import numpy as np
+from baxter import Baxter
+
+async def process_stream():
+    async with Baxter() as robot:
+        print("Subscribing to Baxter head_camera stream...")
+
+        async for frame_bgr in robot.camera.stream("head_camera", resolution=(640, 400)):
+            # 1. Convert to Grayscale
+            gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+
+            # 2. Gaussian Blur to reduce high-frequency noise
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+            # 3. Canny Edge Detection
+            edges = cv2.Canny(blurred, 50, 150)
+
+            # 4. Find Contours
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # 5. Draw bounding boxes around large objects
+            annotated = frame_bgr.copy()
+            for cnt in contours:
+                if cv2.contourArea(cnt) &gt; 500:
+                    x, y, w, h = cv2.boundingRect(cnt)
+                    cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    cv2.putText(annotated, "OBJECT", (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+            # Display side-by-side
+            cv2.imshow("Baxter Head Camera - Raw vs Edges", np.hstack([annotated, cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)]))
+
+            # Press 'q' to exit
+            if cv2.waitKey(1) &amp; 0xFF == ord('q'):
+                break
+
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    asyncio.run(process_stream())
+</code></pre>
+<p>In <strong>Lab 7</strong>, we will link computer vision directly to real-time arm reflexes by integrating MediaPipe AI for interactive gaming, sparring, and gesture recognition.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-7"><h2>Lab 7: AI Gesture Recognition &amp; Interactive HRI Games</h2>
+<p><em>Integrating Google MediaPipe, building an AI Boxing Sparring Partner, Rock-Paper-Scissors, and Human-Robot Interaction.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Integrate Google MediaPipe landmark detection with Baxter's high-speed motion generator.
+2. Build a closed-loop reactive AI system that maps human hand gestures to real-time physical robot responses.
+3. Run and analyze the <strong>Arcade Reflex Boxer 2.0</strong> (<code>baxter box</code>).
+4. Play an interactive tournament of <strong>Rock-Paper-Scissors</strong> against Baxter (<code>baxter play</code>).
+5. Execute calibrated musical choreographies with acoustic synchronization (<code>baxter dance</code> and <code>baxter symphony</code>).</p>
+<hr/>
+<h2>2. Interactive Human-Robot Interaction Architecture</h2>
+<p>Human-Robot Interaction (HRI) requires ultra-low latency: if the delay between a human action and the robot's physical reaction exceeds 100 ms, the interaction feels disconnected and unnatural.</p>
+<pre><code class="language-mermaid">flowchart LR
+    A["USB WebCam / Baxter Cam\n(30 FPS RGB)"] --&gt; B["MediaPipe Hand Landmarker\n(21 3D Keypoints @ 25ms)"]
+    B --&gt; C["Gesture Classifier &amp; State Machine\n(Fist, Open Palm, Peace, Jab)"]
+    C --&gt; D["Kinematic Target Generator\n(Low-Pass Filtered Joints)"]
+    D --&gt; E["Rosbridge WebSockets\n(40 Hz Command Stream)"]
+    E --&gt; F["Physical Baxter &amp; Isaac Sim Twin\n(Synchronized Motion)"]
+</code></pre>
+<hr/>
+<h2>3. The Arcade Reflex Boxer 2.0 (<code>baxter box</code>)</h2>
+<p><code>baxter box</code> transforms Baxter into a real-time reactive sparring partner:
+- Baxter raises both arms into an authentic peek-a-boo boxing guard.
+- Baxter's 1024x600 screen displays an animated boxing face with a red sports headband.
+- When you throw a <strong>Left Jab</strong> (rapid forward motion of your fist toward the camera), Baxter instantly ducks and blocks with its right forearm.
+- When you throw a <strong>Right Cross</strong>, Baxter parries with its left arm.
+- If you drop your hands, Baxter throws a gentle, playful counter-jab!</p>
+<h3>Launching the Boxer:</h3>
+<pre><code class="language-bash"># Launch interactive boxing partner for a 60-second round
+baxter box --duration 60
+</code></pre>
+<hr/>
+<h2>4. The Baxter Interactive Arena (<code>baxter play</code>)</h2>
+<p>The Interactive Arena provides a suite of multi-player HRI games:</p>
+<pre><code class="language-bash">baxter play
+</code></pre>
+<h3>Hotkey Game Modes:</h3>
+<ul>
+<li><strong><code>[1]</code> Arcade Reflex Boxer 2.0</strong>: Full interactive sparring session.</li>
+<li><strong><code>[2]</code> Rock-Paper-Scissors Showdown</strong>:</li>
+<li>Point your hand at the camera and press <code>[Space]</code>.</li>
+<li>Baxter counts down: <em>"ROCK... PAPER... SCISSORS... SHOOT!"</em> by pumping its right arm up and down in synchrony with speech.</li>
+<li>On "SHOOT!", Baxter randomly chooses Rock, Paper, or Scissors, detects your hand sign via MediaPipe, declares the winner on screen, and smiles or frowns!</li>
+<li><strong><code>[3]</code> Jedi Shadow Teleoperation</strong>:</li>
+<li>Full dual-arm mirroring: raise your left arm, Baxter raises its left arm; push forward, Baxter pushes forward.</li>
+<li>Press <code>[m]</code> to toggle selfie mirror reflection mode.</li>
+<li><strong><code>[4]</code> High-Five &amp; Fist-Bump Partner</strong>:</li>
+<li>Hold out your fist: Baxter extends its arm and meets your fist with a gentle touch, detecting contact using Series Elastic Actuator (SEA) deflection.</li>
+</ul>
+<hr/>
+<h2>5. Musical Choreography: Dance &amp; Symphony</h2>
+<p>To observe complex multi-joint coordinated trajectories synchronized to audio:</p>
+<pre><code class="language-bash"># Daft Punk style 124 BPM musical dance party with synchronized beats
+baxter dance
+
+# 5-act classical orchestral symphony choreography
+baxter symphony
+</code></pre>
+<p>During the symphony, Baxter acts as the lead orchestral maestro, dynamically conducting invisible woodwinds, brass, strings, and timpani with expressive wrist and baton sweeps.</p>
+<p>In <strong>Lab 8</strong>, we will bridge physical hardware into the virtual world by constructing an NVIDIA Isaac Sim photorealistic digital twin.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-8"><h2>Lab 8: NVIDIA Isaac Sim Digital Twin &amp; Bidirectional Telemetry</h2>
+<p><em>Connecting Baxter to NVIDIA Omniverse Isaac Sim, streaming 60 FPS joint states, and bidirectional Sim-to-Real control.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Understand the architecture of a real-time <strong>Digital Twin</strong> in robotics.
+2. Launch an articulated USD simulation model of Baxter inside NVIDIA Isaac Sim.
+3. Stream physical joint encoder telemetry into the virtual twin (<strong>Real-to-Sim</strong>).
+4. Teleoperate the digital twin via interactive keyboard hotkeys and mirror movements onto the physical robot (<strong>Sim-to-Real</strong>).
+5. Render photorealistic RTX ray-traced viewport snapshots to disk.</p>
+<hr/>
+<h2>2. Digital Twin Architecture</h2>
+<p>A true digital twin operates bidirectionally:</p>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph Physical World
+        A["Physical Baxter Robot\n(/robot/joint_states @ 100 Hz)"]
+    end
+
+    subgraph baxter-py Bridge
+        B["baxter-py Telemetry Engine\n(WebSockets + UDP 19888)"]
+    end
+
+    subgraph Virtual World
+        C["NVIDIA Isaac Sim (Omniverse)\n(RTX Ray-Tracing, PhysX 5.0)"]
+    end
+
+    A -- "Real-to-Sim Telemetry" --&gt; B
+    B --&gt; C
+    C -- "Sim-to-Real Commands" --&gt; B
+    B --&gt; A
+</code></pre>
+<ol>
+<li><strong>Real-to-Sim</strong>: Physical Baxter encoder states (<code>/robot/joint_states</code>) continuously stream into Isaac Sim at 60+ FPS, faithfully mirroring physical motion, external forces, and human teleoperation.</li>
+<li><strong>Sim-to-Real</strong>: Commands issued inside the simulator are broadcast over UDP (<code>127.0.0.1:19888</code>), driving physical Baxter motors in lockstep.</li>
+</ol>
+<hr/>
+<h2>3. Visual Gallery: RTX Viewport Renders</h2>
+<p>NVIDIA Isaac Sim provides real-time physically based lighting and ray tracing:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Neutral Operational Stance</th>
+<th style="text-align: center;">Welcoming Wave Gesture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><img alt="Baxter Neutral" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/screenshots/baxter_isaac_sim_neutral.png"/></td>
+<td style="text-align: center;"><img alt="Baxter Wave" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/screenshots/baxter_isaac_sim_wave.png"/></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Boxing Guard Pose</th>
+<th style="text-align: center;">Hero Showcase Stance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><img alt="Baxter Boxing" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/screenshots/baxter_isaac_sim_boxing.png"/></td>
+<td style="text-align: center;"><img alt="Baxter Hero" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/screenshots/baxter_isaac_sim_hero.png"/></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2>4. Running the Digital Twin</h2>
+<p>Launch the interactive simulator from your workstation:</p>
+<pre><code class="language-bash"># Launch interactive 3D digital twin (auto-detects display)
+baxter sim
+
+# Launch in headless mode (background physics &amp; telemetry)
+baxter sim --headless
+
+# Enable bidirectional sim-to-real commanding
+baxter sim --sim-to-real
+
+# Render an instant photorealistic RTX viewport screenshot to disk
+baxter sim --screenshot ./docs/screenshots/my_render.png --pose wave
+</code></pre>
+<hr/>
+<h2>5. Sim-to-Real Keyboard Teleoperation Controls</h2>
+<p>When running <code>baxter sim --sim-to-real</code>, you can directly teleoperate Baxter inside the simulation while physical Baxter mirrors every movement in real-time at 40 Hz:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Key Command</th>
+<th style="text-align: left;">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong><code>[1]</code></strong></td>
+<td style="text-align: left;">Neutral / Ready Stance (symmetrical operational pose)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[2]</code></strong></td>
+<td style="text-align: left;">Wave Gesture (right arm elevated, head turned)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[3]</code></strong></td>
+<td style="text-align: left;">Boxing Guard (arms forward, fists up)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[4]</code></strong></td>
+<td style="text-align: left;">Cheer / Victory Stance</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[5]</code></strong></td>
+<td style="text-align: left;">Reach Forward</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[0]</code></strong></td>
+<td style="text-align: left;">Tuck Arms (compact shipping pose)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[Tab]</code></strong> or <strong><code>[Space]</code></strong></td>
+<td style="text-align: left;">Toggle Active Arm (<code>RIGHT</code> $\leftrightarrow$ <code>LEFT</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[q, w, e, r, t, y, u]</code></strong></td>
+<td style="text-align: left;">Select Joint: <code>[q]</code>=s0, <code>[w]</code>=s1, <code>[e]</code>=e0, <code>[r]</code>=e1, <code>[t]</code>=w0, <code>[y]</code>=w1, <code>[u]</code>=w2</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[+]</code></strong> / <strong><code>[-]</code></strong> or <strong><code>[k]</code></strong> / <strong><code>[j]</code></strong></td>
+<td style="text-align: left;">Jog selected joint by $\pm 5^\circ$</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[W]</code></strong> / <strong><code>[S]</code></strong></td>
+<td style="text-align: left;">Direct Shoulder Pitch (Arm UP / DOWN)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[A]</code></strong> / <strong><code>[D]</code></strong></td>
+<td style="text-align: left;">Direct Shoulder Pan (Arm OUTWARD / INWARD)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[R]</code></strong> / <strong><code>[F]</code></strong></td>
+<td style="text-align: left;">Direct Elbow Pitch (Elbow FLEX / EXTEND)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[[]</code></strong> / <strong><code>[]]</code></strong></td>
+<td style="text-align: left;">Pan Head Left / Right</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[c]</code></strong></td>
+<td style="text-align: left;">Center Head Pan</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[m]</code></strong></td>
+<td style="text-align: left;">Toggle Sim-to-Real synchronization ON / OFF</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[h]</code></strong></td>
+<td style="text-align: left;">Display in-terminal hotkey help cheat sheet</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>[Esc]</code></strong> or <strong><code>[x]</code></strong></td>
+<td style="text-align: left;">Safely stop simulation</td>
+</tr>
+</tbody>
+</table>
+<p>In <strong>Lab 9</strong>, we reach the pinnacle of our curriculum: the <strong>Capstone 3D Spatial Monocular Fingertip Vision Teleoperation Project</strong>.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-9"><h2>Lab 9: Capstone: 3D Spatial Vision Teleoperation &amp; Fingertip Tracking</h2>
+<p><em>Monocular 3D spatial reconstruction, perspective projection, isometric HUD, and real-time Sim-to-Real dual-arm teleoperation.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this capstone lab, you will:
+1. Reconstruct physical metric coordinates $(X, Y, Z)$ in meters from a standard 2D webcam using monocular perspective projection and human anatomical knuckle proportions.
+2. Render an isometric 3D HUD visualizer with real-time trajectory trails and bounding volumes.
+3. Implement a pinch-to-engage clutch mechanism to engage and disengage robot control effortlessly.
+4. Teleoperate Baxter's 7-DOF arms in real-time using natural fingertip motions in free space.
+5. Stream motion concurrently to physical Baxter hardware and the NVIDIA Isaac Sim digital twin.</p>
+<hr/>
+<h2>2. Overview &amp; Visual Gallery</h2>
+<p>The 3D Vision Teleoperation system allows an operator to control Baxter's arms simply by moving their index finger in front of a standard computer webcam.</p>
+<p><img alt="Vision Teleoperation Tracking" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/vision_teleop_tracking.jpg"/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Desktop HUD Overlay</th>
+<th style="text-align: center;">3D Depth &amp; Perspective Shadow Visualizer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><img alt="Desktop HUD" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/desktop_hud.jpg"/></td>
+<td style="text-align: center;"><img alt="Depth Perspective" src="https://raw.githubusercontent.com/RoboX2020/baxter-py/076807236876fa3085969fadfd0f362a3429698d/docs/assets/depth_perspective_final.jpg"/></td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2>3. Mathematical Foundations: Monocular 3D Metric Reconstruction</h2>
+<p>Extracting 3D metric coordinates $(X, Y, Z)$ from a single 2D camera without LiDAR or depth sensors is an ill-posed inverse problem. We solve it by exploiting known <strong>human anatomical proportions</strong>.</p>
+<h3>A. Estimating Depth ($Z$):</h3>
+<p>The human metacarpophalangeal (MCP) knuckle span (distance between index MCP and pinky MCP) is remarkably consistent across adult humans:
+$$W_{\text{phys}} \approx 0.085\text{ meters } (8.5\text{ cm})$$</p>
+<p>Using the pinhole camera projection model:
+$$w_{\text{pixel}} = f \cdot \frac{W_{\text{phys}}}{Z}$$</p>
+<p>Where $f$ is the focal length in pixels. We can solve directly for the metric depth $Z$:
+$$Z = \frac{f \cdot W_{\text{phys}}}{w_{\text{pixel}}}$$</p>
+<h3>B. Estimating Lateral Position ($X$) and Height ($Y$):</h3>
+<p>Once metric depth $Z$ is known:
+$$X = \frac{(u - c_x) \cdot Z}{f}, \quad Y = \frac{(v - c_y) \cdot Z}{f}$$</p>
+<p>Where $(u, v)$ is the pixel position of the index fingertip, and $(c_x, c_y)$ is the camera optical center.</p>
+<hr/>
+<h2>4. The Clutch Mechanism (Pinch-to-Engage)</h2>
+<p>In industrial teleoperation, you need a way to reposition your hand without moving the robot (like lifting an optical mouse off a mousepad).</p>
+<p><code>baxter track</code> implements a <strong>Pinch Clutch</strong>:
+- <strong>Disengaged (Clutch Open)</strong>: Move your hand into position. The HUD displays <code>CLUTCH: DISENGAGED (STANDBY)</code>. Baxter maintains its current hold pose.
+- <strong>Engaged (Clutch Closed)</strong>: Pinch your index finger and thumb together (or press <code>[e]</code> to lock continuous tracking). The HUD turns green (<code>CLUTCH: ENGAGED</code>), and Baxter's arm instantly tracks your fingertip in 1:1 metric space!</p>
+<hr/>
+<h2>5. Running the Teleoperator (<code>baxter track</code>)</h2>
+<p>Launch the tracking system from your workstation terminal:</p>
+<pre><code class="language-bash"># Launch live 3D fingertip tracking and Sim-to-Real teleoperation
+baxter track
+
+# Target the left arm instead of the right arm
+baxter track --arm left
+
+# Specify a secondary external webcam
+baxter track --camera 1
+</code></pre>
+<h3>Hotkey Cheat Sheet:</h3>
+<ul>
+<li><strong><code>[Tab]</code> or <code>[Space]</code></strong>: Toggle Active Arm (<code>RIGHT</code> $\leftrightarrow$ <code>LEFT</code>).</li>
+<li><strong><code>[e]</code></strong>: Toggle between <strong>Pinch-to-Engage Mode</strong> and <strong>Continuous Tracking Mode</strong>.</li>
+<li><strong><code>[m]</code></strong>: Toggle Sim-to-Real mirroring (stream to physical hardware).</li>
+<li><strong><code>[r]</code></strong>: Recenter workspace zero reference point.</li>
+<li><strong><code>[q]</code> or <code>ESC</code></strong>: Safely disengage and return robot to neutral posture.</li>
+</ul>
+<hr/>
+<h2>6. End-to-End Teleoperation Architecture</h2>
+<p>The teleoperator runs an asynchronous processing pipeline:
+1. <strong>Camera Ingestion (60 FPS)</strong>: Captures frames from webcam or Baxter head camera.
+2. <strong>MediaPipe Tracking</strong>: Computes 21 hand landmarks in 3D normalized coordinates.
+3. <strong>Metric Solver</strong>: Computes $(X, Y, Z)$ position relative to the camera origin.
+4. <strong>Kinematic Mapping</strong>: Translates $(X, Y, Z)$ offsets into 7-DOF Baxter joint commands:
+   - Shoulder Pan (<code>s0</code>): Maps to lateral $X$ displacement.
+   - Shoulder Pitch (<code>s1</code>): Maps to vertical $Y$ displacement.
+   - Elbow Pitch (<code>e1</code>): Maps to metric depth $Z$ extension.
+5. <strong>Low-Pass Filter &amp; Dispatch</strong>: Filters joint values at 40 Hz and transmits packets over Rosbridge WebSockets and UDP (<code>127.0.0.1:19888</code>).</p>
+<p>In <strong>Lab 10</strong>, we cover routine maintenance, zeroing calibration, sensor tare, and log retrieval to keep Baxter running smoothly.</p><p class="back"><a href="#contents">Back to contents</a></p></section><section id="lab-10"><h2>Lab 10: Hardware Diagnostics, Maintenance &amp; Log Retrieval</h2>
+<p><em>Routine maintenance procedures, sensor tare, Zero-G calibration, FTP log analysis, and system error dictionaries.</em></p>
+<hr/>
+<h2>1. Objectives</h2>
+<p>By the end of this lab, you will:
+1. Perform routine <strong>Tare</strong> and <strong>Sensor Calibration</strong> to eliminate joint drift and SEA spring bias.
+2. Calibrate and test the Zero-Gravity rubber cuff sensors.
+3. Access Baxter's onboard Linux filesystem over FTP to extract diagnostic logs (<code>/var/log/rethink.log</code>).
+4. Decode common hardware error messages (<code>SEA_GLOBAL_ERROR</code>, <code>BAD_ESTOP_STATE</code>, <code>MOTOR_FAULT</code>).
+5. Establish a laboratory maintenance schedule to keep Baxter running reliably for years.</p>
+<hr/>
+<h2>2. Sensor Drift &amp; Series Elastic Actuator Tare</h2>
+<p>Over weeks of continuous operation, thermal expansion and mechanical strain cause minor drift in the analog torque sensors and position encoders of Baxter's Series Elastic Actuators (SEAs). If left uncalibrated, the arms may slowly droop or feel "heavy" in Zero-G mode.</p>
+<h3>A. The Tare Routine (Weekly Maintenance)</h3>
+<p>A <strong>Tare</strong> measures the zero-torque resting bias of each joint spring under known gravity configurations.
+- Frequency: Approximately once per week with regular laboratory use.
+- Duration: ~2 minutes.
+- Procedure:
+  Ensure the arms are completely unloaded (no heavy custom tools attached). Command Baxter to execute a tare cycle:
+  <code>bash
+  # Via baxter-py or ROS command
+  baxter reset
+  baxter untuck</code></p>
+<h3>B. Full Arm Sensor Calibration (Monthly Maintenance)</h3>
+<p>If joint angles report offsets exceeding $2^\circ$ or motors feel jerky:
+- Frequency: Monthly.
+- Runs a multi-pose kinematic self-test across all 14 arm joints to recalibrate spring stiffness parameters and encoder offsets.</p>
+<hr/>
+<h2>3. Calibrating the Zero-G Rubber Cuff Sensors</h2>
+<p>Each wrist contains a pressure-sensitive conductive rubber ring:
+- When squeezed, the resistance drops below a threshold, publishing <code>state: 1</code> to:
+  <code>text
+  /robot/digital_io/&lt;side&gt;_lower_cuff_button/state</code>
+- If the cuff becomes unresponsive:
+  1. Inspect the rubber ring for physical tears or debris lodged under the lip.
+  2. Test the digital signal live using Python:
+     <code>python
+     # Squeeze cuff and observe state transition
+     async with Baxter() as robot:
+         async for state in robot.subscribe("/robot/digital_io/left_lower_cuff_button/state"):
+             print("Cuff Pressed:", state.get("state") == 1)</code></p>
+<hr/>
+<h2>4. Extracting Internal Diagnostic Logs via FTP</h2>
+<p>Baxter runs an embedded FTP server on port 21 of its Ethernet interface (<code>ftp://&lt;ip&gt;</code>).</p>
+<h3>How to Access:</h3>
+<ul>
+<li><strong>Host</strong>: Baxter's IP address (e.g. <code>169.254.9.243</code>)</li>
+<li><strong>Port</strong>: <code>21</code></li>
+<li><strong>Username</strong>: <code>anonymous</code> (or blank)</li>
+<li><strong>Password</strong>: <em>(leave blank)</em></li>
+</ul>
+<h3>Key Log Files to Retrieve:</h3>
+<ol>
+<li><code>/var/log/rethink.log</code>: The primary realtime control log. Contains motor controller faults, safety interlock events, and hardware fault stack traces.</li>
+<li><code>/var/log/syslog</code>: Ubuntu kernel and system daemon events.</li>
+<li><code>/var/log/upstart/</code>: Startup logs for individual Baxter subsystems (<code>realtime_loop</code>, <code>camera_manager</code>, <code>display_manager</code>).</li>
+</ol>
+<h3>Using Command-Line <code>curl</code> or <code>wget</code> to Fetch Logs:</h3>
+<pre><code class="language-bash"># Download rethink.log directly from Baxter
+curl -o baxter_rethink.log ftp://169.254.9.243/var/log/rethink.log
+</code></pre>
+<hr/>
+<h2>5. Comprehensive Error Code Dictionary</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Error Message</th>
+<th style="text-align: left;">Root Cause</th>
+<th style="text-align: left;">Immediate Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>External-enable fault</strong></td>
+<td style="text-align: left;">Safety-system fault requires diagnosis.</td>
+<td style="text-align: left;">Stop and ask the qualified laboratory reviewer to inspect the approved safety system.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>E-stop source 4</strong></td>
+<td style="text-align: left;">Manufacturer definition: brain-heartbeat lapse.</td>
+<td style="text-align: left;">Do not treat this as proof of a wiring fault; use matching manufacturer diagnostics.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Joint right_e0 tripped mechanical joint limit</code></strong></td>
+<td style="text-align: left;">Twist joint jammed against physical $\pm 175^\circ$ hard stop.</td>
+<td style="text-align: left;">Manually rotate forearm/bicep into safe central zone. (See Lab 2).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>GlobalEnable requested, robot is still resetting</code></strong></td>
+<td style="text-align: left;">Enable attempted while error flag is active.</td>
+<td style="text-align: left;">Execute 3-step handshake: Disable $\rightarrow$ Reset $\rightarrow$ Enable. (See Lab 3).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Bandwidth error opening camera</code></strong></td>
+<td style="text-align: left;">More than two cameras opened simultaneously.</td>
+<td style="text-align: left;">Close idle hand camera before opening head camera. (See Lab 6).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong><code>Spring deflection limit exceeded</code></strong></td>
+<td style="text-align: left;">High acceleration or arm impacted external obstacle.</td>
+<td style="text-align: left;">Reduce trajectory acceleration; verify workspace is clear. (See Lab 4).</td>
+</tr>
+</tbody>
+</table>
+<hr/>
+<h2>6. Preventive Maintenance Schedule</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Maintenance Task</th>
+<th style="text-align: center;">Recommended Interval</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Air Intake Filter Cleaning</strong></td>
+<td style="text-align: center;">Every 3 Months</td>
+<td style="text-align: left;">Remove and vacuum the cooling fan foam dust filters on the lower rear torso.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Cable Harness Inspection</strong></td>
+<td style="text-align: center;">Monthly</td>
+<td style="text-align: left;">Inspect external spiral-wrapped cable bundles at elbows and shoulders for pinching or chafing.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Joint Tare</strong></td>
+<td style="text-align: center;">Weekly</td>
+<td style="text-align: left;">Re-zero SEA torsion spring bias in operational neutral posture.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Emergency Stop Inspection</strong></td>
+<td style="text-align: center;">Before Every Session</td>
+<td style="text-align: left;">Verify mushroom switch cuts motor power immediately and halts motion safely.</td>
+</tr>
+</tbody>
+</table><p class="back"><a href="#contents">Back to contents</a></p></section></main><footer><p>Adapted teaching edition of baxter-py. Original source is retained in the repository. Manufacturer documentation governs the matching hardware revision; this page does not replace training, risk assessment or commissioning.</p><details><summary>License and attribution</summary><pre>MIT License
+
+Copyright (c) 2026 Dafodilrat
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+</pre></details></footer></body></html>
